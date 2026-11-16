@@ -6,18 +6,18 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "run_worker_first": [
-      "/api/auth/*",
       "/admin",
       "/admin/*",
+      "/api/auth/*",
       "/api/admin/*"
     ],
     "not_found_handling": "404-page"
   },
   "vars": {
-    "GITHUB_OWNER": "REPLACE_WITH_GITHUB_USERNAME",
+    "GITHUB_OWNER": "sjyothsna",
     "GITHUB_REPO": "jyocancook",
     "GITHUB_BRANCH": "main",
-    "GITHUB_OAUTH_CLIENT_ID": "REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID",
-    "ALLOWED_GITHUB_USER_ID": "REPLACE_WITH_NUMERIC_GITHUB_USER_ID"
+    "GITHUB_OAUTH_CLIENT_ID": "Ov23limExQ9030RiJTwQ",
+    "ALLOWED_GITHUB_USER_ID": "47034524"
   }
 }
