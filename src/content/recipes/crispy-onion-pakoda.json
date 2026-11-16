@@ -1,0 +1,62 @@
+{
+  "slug": "crispy-onion-pakoda",
+  "title": "Crispy Onion Pakoda",
+  "description": "Golden onion fritters, perfect for a rainy afternoon.",
+  "category": "snacks",
+  "tags": [
+    "Vegetarian",
+    "Snack",
+    "Spicy"
+  ],
+  "diet": "Vegetarian",
+  "prepTime": 15,
+  "cookTime": 20,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/crispy-onion-pakoda.png",
+  "published": true,
+  "featured": false,
+  "ingredients": [
+    {
+      "amount": 2,
+      "unit": "",
+      "name": "large onions, thinly sliced"
+    },
+    {
+      "amount": 1,
+      "unit": "cup",
+      "name": "besan (gram flour)"
+    },
+    {
+      "amount": 1,
+      "unit": "tsp",
+      "name": "chilli powder"
+    },
+    {
+      "amount": null,
+      "unit": "",
+      "name": "salt, spices and frying oil"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Mix",
+      "text": "Combine onions, besan, seasoning and just enough moisture to bind."
+    },
+    {
+      "title": "Fry",
+      "text": "Fry small portions in hot oil until crisp and golden."
+    },
+    {
+      "title": "Drain and serve",
+      "text": "Drain excess oil and serve warm."
+    }
+  ],
+  "tips": [
+    "Do not add too much water to the mixture."
+  ],
+  "serveWith": [
+    "Tea",
+    "Coconut Chutney"
+  ]
+}

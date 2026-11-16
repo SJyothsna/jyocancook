@@ -1,0 +1,7 @@
+---
+import Base from '../../layouts/Base.astro';import RecipeCard from '../../components/RecipeCard.astro';import {recipes,tags} from '../../lib/data';
+
+export function getStaticPaths(){return tags.map(tag=>({params:{slug:tag.toLowerCase().replace(/\s+/g,'-')},props:{tag}}));}
+const {tag}=Astro.props as {tag:string};const list=recipes.filter(r=>r.tags.includes(tag));
+---
+<Base title={`Recipes tagged ${tag}`}><div class="container section"><span class="eyebrow">Explore by tag</span><h1>#{tag}</h1>{list.length?<div class="cards">{list.map(r=><RecipeCard recipe={r}/>)}</div>:<div class="empty">No published recipes use this tag yet.</div>}</div></Base>

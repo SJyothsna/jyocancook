@@ -1,0 +1,98 @@
+{
+  "slug": "andhra-chicken-curry",
+  "title": "Andhra Chicken Curry",
+  "description": "A spicy and flavourful Andhra-style chicken curry with onions, tomatoes and aromatic spices.",
+  "category": "curries",
+  "tags": [
+    "Andhra",
+    "Chicken",
+    "Spicy",
+    "Dinner"
+  ],
+  "diet": "Non-Vegetarian",
+  "prepTime": 20,
+  "cookTime": 40,
+  "servings": 4,
+  "difficulty": "Medium",
+  "image": "/images/recipes/andhra-chicken-curry.png",
+  "published": true,
+  "featured": true,
+  "ingredients": [
+    {
+      "amount": 500,
+      "unit": "g",
+      "name": "chicken (curry cut)"
+    },
+    {
+      "amount": 2,
+      "unit": "",
+      "name": "large onions, chopped"
+    },
+    {
+      "amount": 2,
+      "unit": "",
+      "name": "tomatoes, chopped"
+    },
+    {
+      "amount": 1,
+      "unit": "tbsp",
+      "name": "ginger-garlic paste"
+    },
+    {
+      "amount": 2,
+      "unit": "tsp",
+      "name": "red chilli powder"
+    },
+    {
+      "amount": 1,
+      "unit": "tsp",
+      "name": "coriander powder"
+    },
+    {
+      "amount": 0.5,
+      "unit": "tsp",
+      "name": "turmeric powder"
+    },
+    {
+      "amount": 1,
+      "unit": "tsp",
+      "name": "garam masala"
+    },
+    {
+      "amount": 3,
+      "unit": "tbsp",
+      "name": "oil"
+    },
+    {
+      "amount": null,
+      "unit": "",
+      "name": "salt to taste"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Sauté the onions",
+      "text": "Heat oil in a pan. Add the onions and sauté until golden brown."
+    },
+    {
+      "title": "Add the chicken and spices",
+      "text": "Add ginger-garlic paste, chicken, chilli powder, coriander powder, turmeric and salt. Stir well."
+    },
+    {
+      "title": "Simmer the curry",
+      "text": "Add tomatoes and a splash of water. Cover and simmer until the chicken is completely cooked through."
+    },
+    {
+      "title": "Finish and serve",
+      "text": "Add garam masala. Garnish and serve hot with rice or roti."
+    }
+  ],
+  "tips": [
+    "Adjust red chilli powder to your spice preference.",
+    "For best flavour, let the curry rest for 10 minutes before serving."
+  ],
+  "serveWith": [
+    "Steamed Rice",
+    "Roti"
+  ]
+}

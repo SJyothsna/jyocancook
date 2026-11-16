@@ -1,0 +1,188 @@
+---
+import Base from '../../layouts/Base.astro';
+import { recipes, categoryName, type Recipe } from '../../lib/data';
+
+export function getStaticPaths() {
+  return recipes.map((recipe) => ({ params: { slug: recipe.slug }, props: { recipe } }));
+}
+
+const { recipe } = Astro.props as { recipe: Recipe };
+
+// Group ingredients by section if sections exist
+const ingredientSections: { title?: string; items: typeof recipe.ingredients }[] = [];
+recipe.ingredients.forEach((ing) => {
+  const secTitle = ing.section?.trim() || '';
+  const lastSec = ingredientSections[ingredientSections.length - 1];
+  if (lastSec && (lastSec.title || '') === secTitle) {
+    lastSec.items.push(ing);
+  } else {
+    ingredientSections.push({ title: secTitle || undefined, items: [ing] });
+  }
+});
+
+const structured = {
+  '@context': 'https://schema.org',
+  '@type': 'Recipe',
+  name: recipe.title,
+  description: recipe.description,
+  image: [new URL(recipe.image, Astro.site).toString()],
+  recipeYield: String(recipe.servings),
+  prepTime: `PT${recipe.prepTime}M`,
+  cookTime: `PT${recipe.cookTime}M`,
+  recipeCategory: categoryName(recipe.category),
+  keywords: recipe.tags.join(', '),
+  recipeIngredient: recipe.ingredients.map((x) =>
+    [x.amount, x.unit, x.name].filter((v) => v !== null && v !== '').join(' '),
+  ),
+  recipeInstructions: recipe.steps.map((s) => ({ '@type': 'HowToStep', name: s.title, text: s.text })),
+};
+---
+<Base title={recipe.title} description={recipe.description} image={recipe.image}>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(structured).replace(/</g, '\\u003c')} />
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="/">Home</a> › <a href={`/category/${recipe.category}/`}>{categoryName(recipe.category)}</a> › {recipe.title}
+    </div>
+    <div class="recipe-title">
+      <h1>{recipe.title}</h1>
+      <p class="muted intro">{recipe.description}</p>
+      <div class="tags">
+        <a class="pill" href={`/category/${recipe.category}/`}>{categoryName(recipe.category)}</a>
+        {recipe.tags.map((tag) => (
+          <a class="pill" href={`/tag/${encodeURIComponent(tag.toLowerCase().replace(/\s+/g, '-'))}/`}>{tag}</a>
+        ))}
+      </div>
+      <div class="recipe-actions">
+        <button id="save" class="btn btn-outline" type="button">♡ Save</button>
+        <button id="share" class="btn btn-outline" type="button">↗ Share</button>
+        <button class="btn btn-outline" type="button" onclick="window.print()">▣ Print</button>
+      </div>
+    </div>
+
+    <div class="recipe-layout">
+      <div>
+        <img class="recipe-main-image" src={recipe.image} alt={recipe.title} />
+        <section class="steps">
+          <h2>How to make {recipe.title}</h2>
+          {recipe.steps.map((s, i) => (
+            <div class="step">
+              <div class="step-num">{i + 1}</div>
+              <div>
+                <h3>{s.title}</h3>
+                <p>{s.text}</p>
+                {s.image && <img src={s.image} alt={s.title} loading="lazy" />}
+              </div>
+            </div>
+          ))}
+        </section>
+        {recipe.youtubeUrl && (
+          <div class="panel">
+            <h2>Watch the video</h2>
+            <a class="btn" href={recipe.youtubeUrl} target="_blank" rel="noopener">Watch on YouTube ↗</a>
+          </div>
+        )}
+      </div>
+
+      <aside>
+        <div class="meta-grid">
+          <div>
+            <span class="icon">◷</span>
+            <span>Prep Time</span>
+            <strong>{recipe.prepTime} min</strong>
+          </div>
+          <div>
+            <span class="icon">♨</span>
+            <span>Cook Time</span>
+            <strong>{recipe.cookTime} min</strong>
+          </div>
+          <div>
+            <span class="icon">♧</span>
+            <span>Servings</span>
+            <strong>{recipe.servings}</strong>
+          </div>
+          <div>
+            <span class="icon">☆</span>
+            <span>Difficulty</span>
+            <strong>{recipe.difficulty}</strong>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="ingredients-head">
+            <h2>Ingredients</h2>
+            <div class="serving-controls">
+              Servings: <button id="minus" aria-label="Reduce servings">−</button>
+              <strong id="servings">{recipe.servings}</strong>
+              <button id="plus" aria-label="Increase servings">+</button>
+            </div>
+          </div>
+          <div id="ingredients">
+            {ingredientSections.map((sec) => (
+              <div class="ingredient-section-group">
+                {sec.title && <h3 class="ingredient-section-title">{sec.title}</h3>}
+                {sec.items.map((i) => (
+                  <label class="ingredient">
+                    <input type="checkbox" />
+                    <span>
+                      <span class="qty" data-amount={i.amount ?? ''}>{i.amount ?? ''}</span>
+                      {i.unit ? ` ${i.unit}` : ''} {i.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {(recipe.tips?.length ?? 0) > 0 && (
+          <div class="panel panel-warm">
+            <h2>💡 Pro Tips</h2>
+            <ul>{recipe.tips?.map((t) => <li>{t}</li>)}</ul>
+          </div>
+        )}
+
+        {(recipe.serveWith?.length ?? 0) > 0 && (
+          <div class="panel">
+            <h2>Serve with</h2>
+            <p>{recipe.serveWith?.join(' · ')}</p>
+          </div>
+        )}
+      </aside>
+    </div>
+  </div>
+
+  <script define:vars={{ slug: recipe.slug, base: recipe.servings }}>
+    let count = base;
+    const output = document.querySelector('#servings');
+    function update(delta) {
+      count = Math.min(50, Math.max(1, count + delta));
+      output.textContent = count;
+      document.querySelectorAll('.qty').forEach((el) => {
+        const amount = Number(el.dataset.amount);
+        el.textContent =
+          el.dataset.amount === '' ? '' : String(Number(((amount * count) / base).toFixed(2)));
+      });
+    }
+    document.querySelector('#minus').onclick = () => update(-1);
+    document.querySelector('#plus').onclick = () => update(1);
+    const saved = JSON.parse(localStorage.getItem('jyo-saved') || '[]');
+    const save = document.querySelector('#save');
+    save.textContent = saved.includes(slug) ? '♥ Saved' : '♡ Save';
+    save.onclick = () => {
+      let arr = JSON.parse(localStorage.getItem('jyo-saved') || '[]');
+      arr = arr.includes(slug) ? arr.filter((x) => x !== slug) : [...arr, slug];
+      localStorage.setItem('jyo-saved', JSON.stringify(arr));
+      save.textContent = arr.includes(slug) ? '♥ Saved' : '♡ Save';
+    };
+    document.querySelector('#share').onclick = async () => {
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: document.title, url: location.href });
+        } catch {}
+      } else {
+        await navigator.clipboard.writeText(location.href);
+        alert('Recipe link copied');
+      }
+    };
+  </script>
+</Base>

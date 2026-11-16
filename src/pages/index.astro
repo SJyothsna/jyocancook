@@ -1,0 +1,67 @@
+---
+import Base from '../layouts/Base.astro';
+import RecipeCard from '../components/RecipeCard.astro';
+import CategoryStrip from '../components/CategoryStrip.astro';
+import SectionFlourish from '../components/icons/SectionFlourish.astro';
+import { recipes } from '../lib/data';
+import { Utensils } from '@lucide/astro';
+
+const featured = recipes.filter((x) => x.featured);
+const latestRecipes = (featured.length >= 4 ? featured : recipes).slice(0, 8);
+---
+<Base title="Authentic Homemade Indian Recipes">
+  <!-- Hero Section -->
+  <div class="container">
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Homemade Recipes, Made Simple</h1>
+        <p>
+          Discover authentic Indian dishes, everyday meals and family favourites.
+        </p>
+        <a class="btn" href="/recipes/">
+          <Utensils size={18} aria-hidden="true" />
+          <span>Explore Recipes →</span>
+        </a>
+      </div>
+      <div class="hero-photo-wrap">
+        <img
+          class="hero-photo"
+          src="/images/recipes/andhra-chicken-curry.png"
+          alt="Authentic Homemade Andhra Chicken Curry"
+        />
+      </div>
+    </section>
+  </div>
+
+  <!-- Category Browse Strip -->
+  <CategoryStrip />
+
+  <!-- Latest Recipes Section -->
+  <div class="container">
+    <section class="section">
+      <div class="section-heading-centered">
+        <div class="section-title-flourish">
+          <SectionFlourish side="left" class="flourish-icon" />
+          <h2 class="section-title">Latest Recipes</h2>
+          <SectionFlourish side="right" class="flourish-icon" />
+        </div>
+        <a class="link link-right" href="/recipes/">View All Recipes →</a>
+      </div>
+
+      <div class="cards">
+        {latestRecipes.map((r) => <RecipeCard recipe={r} />)}
+      </div>
+    </section>
+
+    <!-- Warm Banner -->
+    <section class="section" style="padding-top: 0;">
+      <div class="panel panel-warm" style="text-align: center; padding: 44px 24px;">
+        <h2>Cooking brings us together</h2>
+        <p class="muted" style="max-width: 600px; margin: 0 auto 20px;">
+          Explore favourite recipes, discover traditional flavours and make memories around the family table.
+        </p>
+        <a class="btn" href="/recipes/">Discover Recipes</a>
+      </div>
+    </section>
+  </div>
+</Base>

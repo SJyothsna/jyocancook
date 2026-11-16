@@ -1,0 +1,70 @@
+{
+  "slug": "vegetable-pulao",
+  "title": "Vegetable Pulao",
+  "description": "Fragrant basmati rice cooked with vegetables and whole spices.",
+  "category": "rice-biryani",
+  "tags": [
+    "Vegetarian",
+    "Rice",
+    "Dinner"
+  ],
+  "diet": "Vegetarian",
+  "prepTime": 15,
+  "cookTime": 25,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/vegetable-pulao.png",
+  "published": true,
+  "featured": false,
+  "ingredients": [
+    {
+      "amount": 2,
+      "unit": "cups",
+      "name": "basmati rice"
+    },
+    {
+      "amount": 2,
+      "unit": "cups",
+      "name": "mixed vegetables"
+    },
+    {
+      "amount": 1,
+      "unit": "",
+      "name": "onion, sliced"
+    },
+    {
+      "amount": 2,
+      "unit": "tbsp",
+      "name": "ghee"
+    },
+    {
+      "amount": null,
+      "unit": "",
+      "name": "whole spices and salt to taste"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Rinse rice",
+      "text": "Wash and soak basmati rice for 20 minutes."
+    },
+    {
+      "title": "Cook aromatics",
+      "text": "Sauté onion and whole spices in ghee."
+    },
+    {
+      "title": "Add vegetables and rice",
+      "text": "Add vegetables, rice, water and salt."
+    },
+    {
+      "title": "Steam and rest",
+      "text": "Cook until rice is tender, rest covered, then fluff."
+    }
+  ],
+  "tips": [
+    "Resting the rice prevents broken grains."
+  ],
+  "serveWith": [
+    "Raita"
+  ]
+}

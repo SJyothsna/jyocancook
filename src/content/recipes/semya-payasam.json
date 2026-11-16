@@ -1,0 +1,67 @@
+{
+  "slug": "semya-payasam",
+  "title": "Semya Payasam",
+  "description": "Creamy vermicelli dessert with cardamom and toasted nuts.",
+  "category": "sweets",
+  "tags": [
+    "Vegetarian",
+    "Festival"
+  ],
+  "diet": "Vegetarian",
+  "prepTime": 10,
+  "cookTime": 20,
+  "servings": 5,
+  "difficulty": "Easy",
+  "image": "/images/recipes/semya-payasam.png",
+  "published": true,
+  "featured": false,
+  "ingredients": [
+    {
+      "amount": 0.75,
+      "unit": "cup",
+      "name": "vermicelli"
+    },
+    {
+      "amount": 4,
+      "unit": "cups",
+      "name": "milk"
+    },
+    {
+      "amount": 0.5,
+      "unit": "cup",
+      "name": "sugar"
+    },
+    {
+      "amount": 1,
+      "unit": "tbsp",
+      "name": "ghee"
+    },
+    {
+      "amount": null,
+      "unit": "",
+      "name": "cardamom, cashews and raisins"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Roast",
+      "text": "Roast vermicelli in a little ghee until fragrant."
+    },
+    {
+      "title": "Simmer",
+      "text": "Cook vermicelli in milk until tender."
+    },
+    {
+      "title": "Sweeten",
+      "text": "Stir in sugar and cardamom."
+    },
+    {
+      "title": "Garnish",
+      "text": "Top with ghee-roasted cashews and raisins."
+    }
+  ],
+  "tips": [
+    "Payasam thickens as it cools."
+  ],
+  "serveWith": []
+}

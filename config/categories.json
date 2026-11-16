@@ -1,0 +1,58 @@
+[
+  {
+    "slug": "breakfast",
+    "name": "Breakfast",
+    "description": "Start your day with something delicious",
+    "image": "/images/categories/breakfast.svg",
+    "order": 1
+  },
+  {
+    "slug": "rice-biryani",
+    "name": "Rice & Biryani",
+    "description": "Fragrant rice favourites",
+    "image": "/images/categories/rice-biryani.svg",
+    "order": 2
+  },
+  {
+    "slug": "curries",
+    "name": "Curries",
+    "description": "Comforting curries and gravies",
+    "image": "/images/categories/curries.svg",
+    "order": 3
+  },
+  {
+    "slug": "chutneys",
+    "name": "Chutneys",
+    "description": "Fresh, spicy sides",
+    "image": "/images/categories/chutneys.svg",
+    "order": 4
+  },
+  {
+    "slug": "snacks",
+    "name": "Snacks",
+    "description": "Tea-time bites and more",
+    "image": "/images/categories/snacks.svg",
+    "order": 5
+  },
+  {
+    "slug": "sweets",
+    "name": "Sweets",
+    "description": "Desserts for every occasion",
+    "image": "/images/categories/sweets.svg",
+    "order": 6
+  },
+  {
+    "slug": "vegetarian",
+    "name": "Vegetarian",
+    "description": "Plant-based homestyle cooking",
+    "image": "/images/categories/vegetarian.svg",
+    "order": 7
+  },
+  {
+    "slug": "non-vegetarian",
+    "name": "Non-Vegetarian",
+    "description": "Chicken, fish and meat favourites",
+    "image": "/images/categories/non-vegetarian.svg",
+    "order": 8
+  }
+]

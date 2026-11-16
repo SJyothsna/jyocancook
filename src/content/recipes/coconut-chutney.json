@@ -1,0 +1,65 @@
+{
+  "slug": "coconut-chutney",
+  "title": "Coconut Chutney",
+  "description": "A fresh South Indian coconut chutney with a fragrant tempering.",
+  "category": "chutneys",
+  "tags": [
+    "Vegetarian",
+    "Quick",
+    "Breakfast"
+  ],
+  "diet": "Vegetarian",
+  "prepTime": 10,
+  "cookTime": 5,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/coconut-chutney.png",
+  "published": true,
+  "featured": false,
+  "ingredients": [
+    {
+      "amount": 1,
+      "unit": "cup",
+      "name": "grated coconut"
+    },
+    {
+      "amount": 2,
+      "unit": "tbsp",
+      "name": "roasted chana dal"
+    },
+    {
+      "amount": 2,
+      "unit": "",
+      "name": "green chillies"
+    },
+    {
+      "amount": 1,
+      "unit": "tsp",
+      "name": "mustard seeds"
+    },
+    {
+      "amount": null,
+      "unit": "",
+      "name": "salt and curry leaves"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Blend",
+      "text": "Blend coconut, chana dal, chilli, salt and a little water."
+    },
+    {
+      "title": "Temper",
+      "text": "Heat oil, splutter mustard seeds and curry leaves."
+    },
+    {
+      "title": "Finish",
+      "text": "Pour tempering over chutney and serve."
+    }
+  ],
+  "tips": [],
+  "serveWith": [
+    "Dosa",
+    "Idli"
+  ]
+}

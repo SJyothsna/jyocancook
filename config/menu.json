@@ -1,0 +1,50 @@
+[
+  {
+    "label": "Home",
+    "href": "/",
+    "order": 1,
+    "visible": true
+  },
+  {
+    "label": "All Recipes",
+    "href": "/recipes/",
+    "order": 2,
+    "visible": true
+  },
+  {
+    "label": "Breakfast",
+    "href": "/category/breakfast/",
+    "order": 3,
+    "visible": true
+  },
+  {
+    "label": "Rice & Biryani",
+    "href": "/category/rice-biryani/",
+    "order": 4,
+    "visible": true
+  },
+  {
+    "label": "Curries",
+    "href": "/category/curries/",
+    "order": 5,
+    "visible": true
+  },
+  {
+    "label": "Snacks",
+    "href": "/category/snacks/",
+    "order": 6,
+    "visible": true
+  },
+  {
+    "label": "Sweets",
+    "href": "/category/sweets/",
+    "order": 7,
+    "visible": true
+  },
+  {
+    "label": "About",
+    "href": "/about/",
+    "order": 8,
+    "visible": true
+  }
+]

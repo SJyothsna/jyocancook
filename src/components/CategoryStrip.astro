@@ -1,0 +1,210 @@
+---
+import { categories } from '../lib/data';
+import BreakfastBowl from './icons/BreakfastBowl.astro';
+import RiceBowl from './icons/RiceBowl.astro';
+import CurryHandi from './icons/CurryHandi.astro';
+import MortarPestle from './MortarPestle.astro';
+import Samosa from './icons/Samosa.astro';
+import SweetDessert from './icons/SweetDessert.astro';
+import VegLeaf from './icons/VegLeaf.astro';
+import MeatDrumstick from './icons/MeatDrumstick.astro';
+import SectionFlourish from './icons/SectionFlourish.astro';
+
+const { currentSlug, showTitle = true } = Astro.props as { currentSlug?: string; showTitle?: boolean };
+
+const iconBySlug: Record<string, any> = {
+  breakfast: BreakfastBowl,
+  'rice-biryani': RiceBowl,
+  curries: CurryHandi,
+  chutneys: MortarPestle,
+  snacks: Samosa,
+  sweets: SweetDessert,
+  vegetarian: VegLeaf,
+  'non-vegetarian': MeatDrumstick,
+};
+---
+<section class="category-browse" aria-labelledby="category-browse-title">
+  <div class="container">
+    {showTitle && (
+      <div class="category-browse-head">
+        <div class="section-title-flourish">
+          <SectionFlourish side="left" class="flourish-icon" />
+          <h2 id="category-browse-title" class="category-browse-title">Browse by Category</h2>
+          <SectionFlourish side="right" class="flourish-icon" />
+        </div>
+      </div>
+    )}
+    <div class="category-strip" data-category-strip>
+      <nav class="category-track" data-track aria-label="Categories">
+        <ul class="category-list">
+          {categories.map((c) => {
+            const Icon = iconBySlug[c.slug] ?? BreakfastBowl;
+            return (
+              <li>
+                <a
+                  class="category-tile"
+                  href={`/category/${c.slug}/`}
+                  aria-current={c.slug === currentSlug ? 'page' : undefined}
+                >
+                  {c.image ? (
+                    <img src={c.image} alt="" class="category-icon" aria-hidden="true" />
+                  ) : (
+                    <Icon class="category-icon" aria-hidden="true" />
+                  )}
+                  <span class="category-label">{c.name}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</section>
+
+<style>
+  .category-browse {
+    background: #fff8f1;
+    padding: 36px 0;
+  }
+  .category-browse-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  .section-title-flourish {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .flourish-icon {
+    width: 50px;
+    height: 16px;
+    color: #8b1e2d;
+    opacity: 0.85;
+    flex: none;
+  }
+  .category-browse-title {
+    margin: 0;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 1.2;
+    color: #8b1e2d;
+  }
+  .category-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+  .category-track {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding: 6px 2px;
+  }
+  .category-track::-webkit-scrollbar {
+    display: none;
+  }
+  .category-list {
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    width: max-content;
+  }
+  .category-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 112px;
+    height: 88px;
+    padding: 8px;
+    border: 1px solid #eed7c4;
+    border-radius: 16px;
+    background: #fff1e6;
+    color: #2d2d2d;
+    text-align: center;
+    scroll-snap-align: start;
+    transition: background-color 0.2s, transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .category-tile:hover {
+    background: #fbe6d6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 30, 45, 0.08);
+  }
+  .category-tile:focus-visible {
+    outline: 3px solid #8b1e2d;
+    outline-offset: 2px;
+  }
+  .category-tile[aria-current='page'] {
+    background: #8b1e2d;
+    border-color: #8b1e2d;
+    color: #fff8f1;
+  }
+  .category-tile[aria-current='page'] :global(.category-icon) {
+    color: #fff8f1;
+  }
+  .category-tile :global(.category-icon) {
+    width: 28px;
+    height: 28px;
+    color: #8b1e2d;
+    flex: none;
+  }
+  .category-label {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  @media (max-width: 1024px) {
+    .category-list {
+      justify-content: flex-start;
+      gap: 12px;
+    }
+  }
+  @media (max-width: 768px) {
+    .category-browse {
+      padding: 24px 0;
+    }
+    .category-browse-title {
+      font-size: 24px;
+    }
+    .flourish-icon {
+      width: 32px;
+    }
+    .category-tile {
+      width: 104px;
+      height: 84px;
+    }
+    .category-tile :global(.category-icon) {
+      width: 26px;
+      height: 26px;
+    }
+    .category-label {
+      font-size: 13px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .category-tile {
+      transition: none;
+    }
+    .category-tile:hover {
+      transform: none;
+    }
+  }
+</style>

@@ -1,0 +1,13 @@
+import categoriesData from '../../config/categories.json';
+import menuData from '../../config/menu.json';
+import tagsData from '../../config/tags.json';
+export type Ingredient = {amount:number|null;unit:string;name:string;section?:string};
+export type Recipe = {slug:string;title:string;description:string;category:string;tags:string[];diet:string;prepTime:number;cookTime:number;servings:number;difficulty:string;image:string;published:boolean;featured?:boolean;ingredients:Ingredient[];steps:{title:string;text:string;image?:string}[];tips?:string[];serveWith?:string[];youtubeUrl?:string};
+export type Category = {slug:string;name:string;description:string;image?:string;emoji?:string;order:number};
+const modules = import.meta.glob('../content/recipes/*.json', {eager:true, import:'default'});
+export const recipes = Object.values(modules).filter((r:any)=>r.published).sort((a:any,b:any)=>a.title.localeCompare(b.title)) as Recipe[];
+export const categories = (categoriesData as Category[]).sort((a,b)=>a.order-b.order);
+export const tags = tagsData as string[];
+export const menu = menuData.filter(x=>x.visible).sort((a,b)=>a.order-b.order);
+export const categoryName = (slug:string)=>categories.find(x=>x.slug===slug)?.name ?? slug;
+export const recipeUrl = (r:Recipe)=>`/recipes/${r.slug}/`;

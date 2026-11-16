@@ -1,0 +1,140 @@
+---
+import '../styles/global.css';
+import { House, Heart, User, Search, ChevronDown } from '@lucide/astro';
+
+const {
+  title = 'Homemade Indian Recipes',
+  description = 'Discover authentic Indian dishes, everyday meals and family favourites at JyoCanCook.',
+  image = '/images/recipes/andhra-chicken-curry.png',
+  noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex,nofollow" />}
+    <meta property="og:title" content={`${title} | JyoCanCook`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL(image, Astro.site).toString()} />
+    <title>{title} | JyoCanCook</title>
+    <slot name="head" />
+  </head>
+  <body>
+    <header>
+      <div class="topbar">
+        <div class="container topline">
+          <a class="logo" href="/" aria-label="JyoCanCook - Home">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#FFF8F1"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 3c0 1.5 1.5 1.5 1.5 3" />
+              <path d="M12 3c0 1.5 1.5 1.5 1.5 3" />
+              <path d="M17 3c0 1.5 1.5 1.5 1.5 3" />
+              <path d="M3 10h18" />
+              <path d="M4 10c0 5 3.6 9 8 9s8-4 8-9" />
+              <path d="M8 19h8" />
+            </svg>
+            <div class="logo-text">
+              <span>JyoCanCook</span>
+              <small>Homemade Recipes</small>
+            </div>
+          </a>
+
+          <form class="top-search" action="/search/" method="get" role="search">
+            <input
+              aria-label="Search recipes, ingredients, or tags"
+              name="q"
+              placeholder="Search recipes, ingredients, or tags..."
+              required
+            />
+            <button type="submit" aria-label="Search">
+              <Search size={18} aria-hidden="true" />
+            </button>
+          </form>
+
+          <div class="top-links">
+            <a href="/recipes/" class="top-link">
+              <Heart size={18} aria-hidden="true" />
+              <span>My Recipes</span>
+            </a>
+            <a href="/admin/" rel="nofollow" class="top-link">
+              <User size={18} aria-hidden="true" />
+              <span>Admin</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-shell">
+        <nav class="container nav" aria-label="Main navigation">
+          <a href="/" class:list={{ active: Astro.url.pathname === '/' }}>
+            <House size={16} aria-hidden="true" />
+            <span>Home</span>
+          </a>
+          <a href="/recipes/" class:list={{ active: Astro.url.pathname === '/recipes/' }}>
+            <span>Recipes</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </a>
+          <a href="/category/breakfast/" class:list={{ active: Astro.url.pathname.includes('/category/breakfast') }}>
+            Breakfast
+          </a>
+          <a href="/category/rice-biryani/" class:list={{ active: Astro.url.pathname.includes('/category/rice-biryani') }}>
+            Rice &amp; Biryani
+          </a>
+          <a href="/category/curries/" class:list={{ active: Astro.url.pathname.includes('/category/curries') }}>
+            Curries
+          </a>
+          <a href="/category/chutneys/" class:list={{ active: Astro.url.pathname.includes('/category/chutneys') }}>
+            Chutneys
+          </a>
+          <a href="/category/snacks/" class:list={{ active: Astro.url.pathname.includes('/category/snacks') }}>
+            Snacks
+          </a>
+          <a href="/category/sweets/" class:list={{ active: Astro.url.pathname.includes('/category/sweets') }}>
+            Sweets
+          </a>
+          <a href="/category/vegetarian/" class:list={{ active: Astro.url.pathname.includes('/category/vegetarian') }}>
+            <span>Vegetarian</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </a>
+          <a href="/category/non-vegetarian/" class:list={{ active: Astro.url.pathname.includes('/category/non-vegetarian') }}>
+            <span>Non-Vegetarian</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div>
+          <span class="logo">JyoCanCook</span>
+          <p class="muted">Made with love, shared with joy. Discover authentic Indian dishes.</p>
+        </div>
+        <div>
+          <a href="/recipes/">All Recipes</a> · <a href="/about/">About</a> · <a href="/search/">Search</a>
+        </div>
+        <small class="muted">© {new Date().getFullYear()} JyoCanCook. All rights reserved.</small>
+      </div>
+    </footer>
+  </body>
+</html>

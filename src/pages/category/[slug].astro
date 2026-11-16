@@ -1,0 +1,34 @@
+---
+import Base from '../../layouts/Base.astro';
+import RecipeCard from '../../components/RecipeCard.astro';
+import CategoryStrip from '../../components/CategoryStrip.astro';
+import { categories, recipes, type Category } from '../../lib/data';
+
+export function getStaticPaths() {
+  return categories.map((category) => ({ params: { slug: category.slug }, props: { category } }));
+}
+
+const { category } = Astro.props as { category: Category };
+const list = recipes.filter(
+  (x) =>
+    x.category === category.slug ||
+    (category.slug === 'vegetarian' && x.diet === 'Vegetarian') ||
+    (category.slug === 'non-vegetarian' && x.diet === 'Non-Vegetarian'),
+);
+---
+<Base title={category.name} description={category.description}>
+  <CategoryStrip currentSlug={category.slug} showTitle={false} />
+  <div class="container section">
+    <span class="eyebrow" style="display:inline-flex;align-items:center;gap:6px">
+      {category.image && <img src={category.image} alt="" style="width:20px;height:20px;object-fit:contain" />}
+      <span>Recipe category</span>
+    </span>
+    <h1>{category.name}</h1>
+    <p class="muted">{category.description}</p>
+    {list.length ? (
+      <div class="cards">{list.map((r) => <RecipeCard recipe={r} />)}</div>
+    ) : (
+      <div class="empty">More recipes are coming soon in this category.</div>
+    )}
+  </div>
+</Base>

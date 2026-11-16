@@ -1,0 +1,81 @@
+{
+  "slug": "masala-dosa",
+  "title": "Masala Dosa",
+  "description": "Crispy golden dosa filled with a gently spiced potato masala.",
+  "category": "breakfast",
+  "tags": [
+    "Vegetarian",
+    "Breakfast",
+    "Comfort Food"
+  ],
+  "diet": "Vegetarian",
+  "prepTime": 15,
+  "cookTime": 25,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/masala-dosa.png",
+  "published": true,
+  "featured": true,
+  "ingredients": [
+    {
+      "amount": 3,
+      "unit": "cups",
+      "name": "dosa batter"
+    },
+    {
+      "amount": 3,
+      "unit": "",
+      "name": "boiled potatoes"
+    },
+    {
+      "amount": 1,
+      "unit": "",
+      "name": "onion, sliced"
+    },
+    {
+      "amount": 1,
+      "unit": "tsp",
+      "name": "mustard seeds"
+    },
+    {
+      "amount": 0.25,
+      "unit": "tsp",
+      "name": "turmeric"
+    },
+    {
+      "amount": 1,
+      "unit": "tbsp",
+      "name": "oil"
+    },
+    {
+      "amount": null,
+      "unit": "",
+      "name": "salt to taste"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Make the filling",
+      "text": "Heat oil; splutter mustard seeds, cook onions, then add turmeric and mashed potatoes."
+    },
+    {
+      "title": "Spread the dosa",
+      "text": "Pour batter onto a hot tawa and spread into a thin circle."
+    },
+    {
+      "title": "Cook until crisp",
+      "text": "Cook until golden around the edges."
+    },
+    {
+      "title": "Fill and serve",
+      "text": "Add potato masala, fold, and serve with chutney."
+    }
+  ],
+  "tips": [
+    "A well-heated tawa helps produce a crisp dosa."
+  ],
+  "serveWith": [
+    "Coconut Chutney",
+    "Sambar"
+  ]
+}
