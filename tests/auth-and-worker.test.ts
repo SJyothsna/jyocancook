@@ -367,6 +367,71 @@ describe('JyoCanCook Worker Authentication & Authorization', () => {
       assert.strictEqual(data.user.name, 'Jyothsna');
     });
 
+    it('should reject cross-site mutations with 403 Invalid origin', async () => {
+      const sessionToken = await createSessionToken(
+        { id: '987654321', login: 'jyocancook-owner' },
+        baseEnv.SESSION_SECRET!
+      );
+
+      const req = new Request('https://jyocancook.com/api/admin/recipes/andhra-chicken-curry', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          Origin: 'https://malicious-cross-origin.com',
+          Cookie: `jyo_admin_session=${sessionToken}`,
+        },
+        body: JSON.stringify({ recipe: { title: 'Cross Site Recipe' } }),
+      });
+
+      const res = await worker.fetch(req, baseEnv);
+      assert.strictEqual(res.status, 403);
+      const data = await res.json();
+      assert.strictEqual(data.error, 'Invalid origin');
+    });
+
+    it('should reject non-JSON mutations with 415 Unsupported Media Type', async () => {
+      const sessionToken = await createSessionToken(
+        { id: '987654321', login: 'jyocancook-owner' },
+        baseEnv.SESSION_SECRET!
+      );
+
+      const req = new Request('https://jyocancook.com/api/admin/categories', {
+        method: 'POST',
+        headers: {
+          'content-type': 'text/plain',
+          Origin: 'https://jyocancook.com',
+          Cookie: `jyo_admin_session=${sessionToken}`,
+        },
+        body: 'raw text payload',
+      });
+
+      const res = await worker.fetch(req, baseEnv);
+      assert.strictEqual(res.status, 415);
+      const data = await res.json();
+      assert.strictEqual(data.error, 'Content type must be application/json');
+    });
+
+    it('should reject unsupported HTTP methods on admin API with 405 Method Not Allowed', async () => {
+      const sessionToken = await createSessionToken(
+        { id: '987654321', login: 'jyocancook-owner' },
+        baseEnv.SESSION_SECRET!
+      );
+
+      const req = new Request('https://jyocancook.com/api/admin/status', {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          Cookie: `jyo_admin_session=${sessionToken}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const res = await worker.fetch(req, baseEnv);
+      assert.strictEqual(res.status, 405);
+      const data = await res.json();
+      assert.strictEqual(data.error, 'Method not allowed');
+    });
+
     it('should clear cookies and redirect on /api/auth/logout', async () => {
       const req = new Request('https://jyocancook.com/api/auth/logout');
       const res = await worker.fetch(req, baseEnv);
