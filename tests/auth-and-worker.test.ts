@@ -7,6 +7,8 @@ import worker, {
   parseCookies,
   createCookieHeader,
   clearCookieHeader,
+  sanitizeRecipe,
+  sanitizeConfig,
   type Env,
   type Fetcher,
 } from '../worker/index.ts';
@@ -441,6 +443,46 @@ describe('JyoCanCook Worker Authentication & Authorization', () => {
       const setCookies = res.headers.getSetCookie ? res.headers.getSetCookie() : [res.headers.get('Set-Cookie') || ''];
       const sessionClear = setCookies.find((c) => c.includes('jyo_admin_session='));
       assert.ok(sessionClear && sessionClear.includes('Max-Age=0'));
+    });
+  });
+
+  describe('Recipe and Configuration Sanitization', () => {
+    it('should sanitize and preserve story, nutrition, step images, and ingredient sections', () => {
+      const sanitized = sanitizeRecipe({
+        title: 'Chicken Kurma Restaurant Style',
+        slug: 'chicken-kurma-restaurant-style',
+        category: 'curries',
+        story: 'A wonderful homestyle kurma recipe passed down through generations.',
+        tags: ['Chicken', 'Dinner'],
+        diet: 'Non-Vegetarian',
+        prepTime: '15',
+        cookTime: '35',
+        servings: '4',
+        difficulty: 'Easy',
+        published: true,
+        nutrition: {
+          calories: '380',
+          carbs: '22.5',
+          protein: '28.1',
+          fat: '14.0',
+          fiber: '3.5',
+        },
+        ingredients: [
+          { name: 'Chicken', amount: 500, unit: 'g', section: 'Main' },
+          { name: 'Onions', amount: 2, unit: 'piece', section: 'Gravy' },
+        ],
+        steps: [
+          { title: 'Sauté', text: 'Sauté onions until golden.', image: '/images/recipes/step1.jpg' },
+        ],
+      });
+
+      assert.strictEqual(sanitized.slug, 'chicken-kurma-restaurant-style');
+      assert.strictEqual(sanitized.story, 'A wonderful homestyle kurma recipe passed down through generations.');
+      assert.strictEqual(sanitized.nutrition?.calories, 380);
+      assert.strictEqual(sanitized.nutrition?.carbs, 22.5);
+      assert.strictEqual(sanitized.nutrition?.protein, 28.1);
+      assert.strictEqual(sanitized.ingredients[0].section, 'Main');
+      assert.strictEqual(sanitized.steps[0].image, '/images/recipes/step1.jpg');
     });
   });
 });

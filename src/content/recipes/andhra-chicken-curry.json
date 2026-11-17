@@ -1,6 +1,6 @@
 {
   "slug": "andhra-chicken-curry",
-  "title": "Andhra Chicken Curry",
+  "title": "Andhra Chicken Curry spicy",
   "description": "A spicy and flavourful Andhra-style chicken curry with onions, tomatoes and aromatic spices.",
   "category": "curries",
   "tags": [
@@ -94,5 +94,13 @@
   "serveWith": [
     "Steamed Rice",
     "Roti"
-  ]
+  ],
+  "youtubeUrl": "https://www.youtube.com/watch?v=jtTc4mit7GA",
+  "nutrition": {
+    "calories": 1600,
+    "carbs": 100,
+    "protein": 75,
+    "fat": 50,
+    "fiber": 50
+  }
 }

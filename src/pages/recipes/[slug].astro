@@ -8,6 +8,58 @@ export function getStaticPaths() {
 
 const { recipe } = Astro.props as { recipe: Recipe };
 
+// Calculate similar recipes based on category, diet, and shared tags
+const recipeTagSet = new Set((recipe.tags || []).map((t) => t.toLowerCase()));
+const scored = recipes
+  .filter((x) => x.slug !== recipe.slug)
+  .map((x) => {
+    let score = 0;
+    if (x.category === recipe.category) score += 3;
+    if (x.diet === recipe.diet) score += 1;
+    (x.tags || []).forEach((t) => {
+      if (recipeTagSet.has(t.toLowerCase())) score += 2;
+    });
+    return { recipe: x, score };
+  })
+  .sort((a, b) => b.score - a.score);
+
+const similarRecipes = scored
+  .filter((item) => item.score > 0)
+  .slice(0, 3)
+  .map((item) => item.recipe);
+
+const similarSlugSet = new Set(similarRecipes.map((r) => r.slug));
+
+// Latest recipes (excluding current and already displayed similar recipes)
+const latestRecipes = recipes
+  .filter((x) => x.slug !== recipe.slug && !similarSlugSet.has(x.slug))
+  .slice(0, 3);
+
+function getYouTubeEmbedUrl(url?: string): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) {
+      const id = u.pathname.slice(1);
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+    }
+    if (u.hostname.includes('youtube.com')) {
+      if (u.pathname.startsWith('/embed/')) {
+        return `https://www.youtube-nocookie.com${u.pathname}`;
+      }
+      if (u.pathname.startsWith('/shorts/')) {
+        const id = u.pathname.replace('/shorts/', '');
+        return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+      }
+      const v = u.searchParams.get('v');
+      return v ? `https://www.youtube-nocookie.com/embed/${v}` : null;
+    }
+  } catch {}
+  return null;
+}
+
+const youtubeEmbedUrl = getYouTubeEmbedUrl(recipe.youtubeUrl);
+
 // Group ingredients by section if sections exist
 const ingredientSections: { title?: string; items: typeof recipe.ingredients }[] = [];
 recipe.ingredients.forEach((ing) => {
@@ -34,7 +86,22 @@ const structured = {
   recipeIngredient: recipe.ingredients.map((x) =>
     [x.amount, x.unit, x.name].filter((v) => v !== null && v !== '').join(' '),
   ),
-  recipeInstructions: recipe.steps.map((s) => ({ '@type': 'HowToStep', name: s.title, text: s.text })),
+  recipeInstructions: recipe.steps.map((s) => ({
+    '@type': 'HowToStep',
+    name: s.title,
+    text: s.text,
+    ...(s.image ? { image: new URL(s.image, Astro.site).toString() } : {}),
+  })),
+  ...(recipe.nutrition ? {
+    nutrition: {
+      '@type': 'NutritionInformation',
+      ...(recipe.nutrition.calories !== undefined ? { calories: `${recipe.nutrition.calories} calories` } : {}),
+      ...(recipe.nutrition.carbs !== undefined ? { carbohydrateContent: `${recipe.nutrition.carbs} g` } : {}),
+      ...(recipe.nutrition.protein !== undefined ? { proteinContent: `${recipe.nutrition.protein} g` } : {}),
+      ...(recipe.nutrition.fat !== undefined ? { fatContent: `${recipe.nutrition.fat} g` } : {}),
+      ...(recipe.nutrition.fiber !== undefined ? { fiberContent: `${recipe.nutrition.fiber} g` } : {}),
+    },
+  } : {}),
 };
 ---
 <Base title={recipe.title} description={recipe.description} image={recipe.image}>
@@ -61,51 +128,98 @@ const structured = {
 
     <div class="recipe-layout">
       <div>
-        <img class="recipe-main-image" src={recipe.image} alt={recipe.title} />
-        <section class="steps">
-          <h2>How to make {recipe.title}</h2>
-          {recipe.steps.map((s, i) => (
-            <div class="step">
-              <div class="step-num">{i + 1}</div>
-              <div>
-                <h3>{s.title}</h3>
-                <p>{s.text}</p>
-                {s.image && <img src={s.image} alt={s.title} loading="lazy" />}
+        {youtubeEmbedUrl ? (
+          <div class="recipe-main-media video-container">
+            <iframe
+              src={youtubeEmbedUrl}
+              title={`How to make ${recipe.title}`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+              loading="lazy"
+            ></iframe>
+          </div>
+        ) : (
+          <img class="recipe-main-image" src={recipe.image} alt={recipe.title} />
+        )}
+
+        <div class="meta-strip">
+          <div class="meta-item">
+            <span class="meta-icon">◷</span>
+            <div class="meta-content">
+              <span class="meta-label">Prep Time</span>
+              <strong class="meta-value">{recipe.prepTime} min</strong>
+            </div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-icon">♨</span>
+            <div class="meta-content">
+              <span class="meta-label">Cook Time</span>
+              <strong class="meta-value">{recipe.cookTime} min</strong>
+            </div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-icon">♧</span>
+            <div class="meta-content">
+              <span class="meta-label">Servings</span>
+              <strong class="meta-value">{recipe.servings}</strong>
+            </div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-icon">☆</span>
+            <div class="meta-content">
+              <span class="meta-label">Difficulty</span>
+              <strong class="meta-value">{recipe.difficulty}</strong>
+            </div>
+          </div>
+          {recipe.nutrition?.calories !== undefined && (
+            <div class="meta-item">
+              <span class="meta-icon">⚡</span>
+              <div class="meta-content">
+                <span class="meta-label">Calories</span>
+                <strong class="meta-value">{recipe.nutrition.calories} kcal</strong>
               </div>
             </div>
-          ))}
-        </section>
-        {recipe.youtubeUrl && (
-          <div class="panel">
-            <h2>Watch the video</h2>
-            <a class="btn" href={recipe.youtubeUrl} target="_blank" rel="noopener">Watch on YouTube ↗</a>
+          )}
+        </div>
+
+        {recipe.nutrition && (recipe.nutrition.protein !== undefined || recipe.nutrition.carbs !== undefined || recipe.nutrition.fat !== undefined || recipe.nutrition.fiber !== undefined) && (
+          <div class="nutrition-strip">
+            <span class="nutrition-label">Nutrition:</span>
+            <div class="nutrition-items">
+              {recipe.nutrition.carbs !== undefined && (
+                <div class="nutrition-pill">
+                  <span class="nut-name">Carbs</span>
+                  <strong class="nut-val">{recipe.nutrition.carbs}g</strong>
+                </div>
+              )}
+              {recipe.nutrition.protein !== undefined && (
+                <div class="nutrition-pill">
+                  <span class="nut-name">Protein</span>
+                  <strong class="nut-val">{recipe.nutrition.protein}g</strong>
+                </div>
+              )}
+              {recipe.nutrition.fiber !== undefined && (
+                <div class="nutrition-pill">
+                  <span class="nut-name">Fiber</span>
+                  <strong class="nut-val">{recipe.nutrition.fiber}g</strong>
+                </div>
+              )}
+              {recipe.nutrition.fat !== undefined && (
+                <div class="nutrition-pill">
+                  <span class="nut-name">Fat</span>
+                  <strong class="nut-val">{recipe.nutrition.fat}g</strong>
+                </div>
+              )}
+            </div>
           </div>
         )}
-      </div>
 
-      <aside>
-        <div class="meta-grid">
-          <div>
-            <span class="icon">◷</span>
-            <span>Prep Time</span>
-            <strong>{recipe.prepTime} min</strong>
+        {recipe.story && (
+          <div class="recipe-story-panel">
+            <div class="recipe-story-badge">Story &amp; Background</div>
+            <p class="recipe-story-text">{recipe.story}</p>
           </div>
-          <div>
-            <span class="icon">♨</span>
-            <span>Cook Time</span>
-            <strong>{recipe.cookTime} min</strong>
-          </div>
-          <div>
-            <span class="icon">♧</span>
-            <span>Servings</span>
-            <strong>{recipe.servings}</strong>
-          </div>
-          <div>
-            <span class="icon">☆</span>
-            <span>Difficulty</span>
-            <strong>{recipe.difficulty}</strong>
-          </div>
-        </div>
+        )}
 
         <div class="panel">
           <div class="ingredients-head">
@@ -120,31 +234,101 @@ const structured = {
             {ingredientSections.map((sec) => (
               <div class="ingredient-section-group">
                 {sec.title && <h3 class="ingredient-section-title">{sec.title}</h3>}
-                {sec.items.map((i) => (
-                  <label class="ingredient">
-                    <input type="checkbox" />
-                    <span>
-                      <span class="qty" data-amount={i.amount ?? ''}>{i.amount ?? ''}</span>
-                      {i.unit ? ` ${i.unit}` : ''} {i.name}
-                    </span>
-                  </label>
-                ))}
+                <div class="ingredient-grid">
+                  {sec.items.map((i) => (
+                    <label class="ingredient">
+                      <input type="checkbox" />
+                      <span>
+                        <span class="qty" data-amount={i.amount ?? ''}>{i.amount ?? ''}</span>
+                        {i.unit ? ` ${i.unit}` : ''} {i.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {(recipe.tips?.length ?? 0) > 0 && (
-          <div class="panel panel-warm">
-            <h2>💡 Pro Tips</h2>
-            <ul>{recipe.tips?.map((t) => <li>{t}</li>)}</ul>
+        <section class="steps">
+          <h2>How to make {recipe.title}</h2>
+          {recipe.steps.map((s, i) => (
+            <div class="step">
+              <div class="step-num">{i + 1}</div>
+              <div class="step-body">
+                <div class="step-content">
+                  <h3>{s.title}</h3>
+                  <p>{s.text}</p>
+                </div>
+                {s.image && (
+                  <div class="step-image-wrap">
+                    <img class="step-image" src={s.image} alt={s.title} loading="lazy" />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {((recipe.tips?.length ?? 0) > 0 || (recipe.serveWith?.length ?? 0) > 0) && (
+          <div class="post-steps-grid">
+            {(recipe.tips?.length ?? 0) > 0 && (
+              <div class="panel panel-warm" style="margin-bottom:0">
+                <h2>💡 Pro Tips</h2>
+                <ul>{recipe.tips?.map((t) => <li>{t}</li>)}</ul>
+              </div>
+            )}
+            {(recipe.serveWith?.length ?? 0) > 0 && (
+              <div class="panel" style="margin-bottom:0">
+                <h2>🍽️ Serve with</h2>
+                <p>{recipe.serveWith?.join(' · ')}</p>
+              </div>
+            )}
           </div>
         )}
 
-        {(recipe.serveWith?.length ?? 0) > 0 && (
+      </div>
+
+      <aside>
+        {similarRecipes.length > 0 && (
           <div class="panel">
-            <h2>Serve with</h2>
-            <p>{recipe.serveWith?.join(' · ')}</p>
+            <h2>You Might Also Like</h2>
+            <div class="sidebar-recipe-list">
+              {similarRecipes.map((r) => (
+                <a class="sidebar-recipe-item" href={`/recipes/${r.slug}/`}>
+                  <img class="sidebar-recipe-thumb" src={r.image} alt={r.title} loading="lazy" />
+                  <div class="sidebar-recipe-info">
+                    <h3>{r.title}</h3>
+                    <div class="sidebar-recipe-meta">
+                      <span>{categoryName(r.category)}</span>
+                      <span>•</span>
+                      <span>{r.prepTime + r.cookTime} min</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {latestRecipes.length > 0 && (
+          <div class="panel">
+            <h2>Latest Recipes</h2>
+            <div class="sidebar-recipe-list">
+              {latestRecipes.map((r) => (
+                <a class="sidebar-recipe-item" href={`/recipes/${r.slug}/`}>
+                  <img class="sidebar-recipe-thumb" src={r.image} alt={r.title} loading="lazy" />
+                  <div class="sidebar-recipe-info">
+                    <h3>{r.title}</h3>
+                    <div class="sidebar-recipe-meta">
+                      <span>{categoryName(r.category)}</span>
+                      <span>•</span>
+                      <span>{r.prepTime + r.cookTime} min</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         )}
       </aside>

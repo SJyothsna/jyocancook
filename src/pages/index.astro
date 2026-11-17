@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import RecipeCard from '../components/RecipeCard.astro';
-import CategoryStrip from '../components/CategoryStrip.astro';
 import SectionFlourish from '../components/icons/SectionFlourish.astro';
 import { recipes } from '../lib/data';
 import { Utensils } from '@lucide/astro';
@@ -32,9 +31,6 @@ const latestRecipes = (featured.length >= 4 ? featured : recipes).slice(0, 8);
       </div>
     </section>
   </div>
-
-  <!-- Category Browse Strip -->
-  <CategoryStrip />
 
   <!-- Latest Recipes Section -->
   <div class="container">

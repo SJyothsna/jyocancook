@@ -277,6 +277,15 @@ export function sanitizeRecipe(r: any) {
   if (ingredients.some((i: any) => i.amount !== null && (!Number.isFinite(i.amount) || i.amount < 0))) {
     throw Error('Invalid ingredient quantity');
   }
+  const nut = r.nutrition && typeof r.nutrition === 'object' ? {
+    ...(r.nutrition.calories !== undefined && r.nutrition.calories !== '' && !isNaN(Number(r.nutrition.calories)) ? { calories: Math.max(0, Math.min(100000, Math.round(Number(r.nutrition.calories)))) } : {}),
+    ...(r.nutrition.carbs !== undefined && r.nutrition.carbs !== '' && !isNaN(Number(r.nutrition.carbs)) ? { carbs: Math.max(0, Math.min(10000, Number(Number(r.nutrition.carbs).toFixed(1)))) } : {}),
+    ...(r.nutrition.protein !== undefined && r.nutrition.protein !== '' && !isNaN(Number(r.nutrition.protein)) ? { protein: Math.max(0, Math.min(10000, Number(Number(r.nutrition.protein).toFixed(1)))) } : {}),
+    ...(r.nutrition.fat !== undefined && r.nutrition.fat !== '' && !isNaN(Number(r.nutrition.fat)) ? { fat: Math.max(0, Math.min(10000, Number(Number(r.nutrition.fat).toFixed(1)))) } : {}),
+    ...(r.nutrition.fiber !== undefined && r.nutrition.fiber !== '' && !isNaN(Number(r.nutrition.fiber)) ? { fiber: Math.max(0, Math.min(10000, Number(Number(r.nutrition.fiber).toFixed(1)))) } : {}),
+  } : undefined;
+  const nutrition = nut && Object.keys(nut).length > 0 ? nut : undefined;
+
   return {
     slug: id,
     title,
@@ -291,11 +300,13 @@ export function sanitizeRecipe(r: any) {
     image: img,
     published: r.published === true,
     featured: r.featured === true,
+    ...(r.story ? { story: String(r.story).slice(0, 10000) } : {}),
     ingredients,
     steps,
     tips: Array.isArray(r.tips) ? r.tips.slice(0, 30).map(String) : [],
     serveWith: Array.isArray(r.serveWith) ? r.serveWith.slice(0, 30).map(String) : [],
     ...(r.youtubeUrl && validUrl(String(r.youtubeUrl)) ? { youtubeUrl: r.youtubeUrl } : {}),
+    ...(nutrition ? { nutrition } : {}),
   };
 }
 

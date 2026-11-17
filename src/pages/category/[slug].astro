@@ -1,7 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
-import CategoryStrip from '../../components/CategoryStrip.astro';
 import { categories, recipes, type Category } from '../../lib/data';
 
 export function getStaticPaths() {
@@ -17,7 +16,6 @@ const list = recipes.filter(
 );
 ---
 <Base title={category.name} description={category.description}>
-  <CategoryStrip currentSlug={category.slug} showTitle={false} />
   <div class="container section">
     <span class="eyebrow" style="display:inline-flex;align-items:center;gap:6px">
       {category.image && <img src={category.image} alt="" style="width:20px;height:20px;object-fit:contain" />}

@@ -65,12 +65,24 @@ async function load() {
   notice('Loading ' + tab + '...');
   try {
     if (tab === 'recipes') {
-      cache.recipes = (await api('recipes')).data;
+      const [recipesRes, categoriesRes, tagsRes] = await Promise.all([
+        api('recipes'),
+        cache.categories ? Promise.resolve(cache.categories) : api('categories').catch(() => ({ data: [] })),
+        cache.tags ? Promise.resolve(cache.tags) : api('tags').catch(() => ({ data: [] })),
+      ]);
+      cache.recipes = recipesRes.data;
+      cache.categories = categoriesRes;
+      cache.tags = tagsRes;
     } else {
       cache[tab] = await api(tab);
     }
     render();
-    notice('Ready. Changes publish through GitHub and your Cloudflare deployment pipeline.');
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    notice(
+      isLocal
+        ? 'Ready (Local Development Mode). Changes save directly to your local project files.'
+        : 'Ready. Changes publish through GitHub and your Cloudflare deployment pipeline.',
+    );
   } catch (e: any) {
     notice(String(e?.message || e), true);
     content.classList.add('hidden');
@@ -157,13 +169,26 @@ function ingredientSectionHtml(sec: { title?: string; items?: any[] } = {}) {
   </div>`;
 }
 
-function stepSectionHtml(step: { title?: string; text?: string } = {}) {
+function stepSectionHtml(step: { title?: string; text?: string; image?: string } = {}) {
+  const hasImg = Boolean(step.image);
   return `<div class="step-section-box" data-step-section>
     <div class="step-section-head">
       <input type="text" class="step-title-input" placeholder="Step / Section Title (e.g. Sauté Onions, Tempering, Simmer)" value="${esc(step.title || '')}" required />
       <button type="button" class="btn-icon-danger remove-step-box" title="Remove step">✕</button>
     </div>
     <textarea class="step-text-input" rows="3" placeholder="Detailed instructions for this step..." required>${esc(step.text || '')}</textarea>
+    <div class="step-image-row" style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:600;color:var(--muted)">Step photo:</span>
+      <input type="text" class="step-image-input" placeholder="/images/recipes/... (optional)" value="${esc(step.image || '')}" style="flex:1;min-width:160px;font-size:13px;padding:6px 10px" />
+      <label class="btn btn-outline" style="padding:4px 10px;font-size:12px;cursor:pointer;white-space:nowrap;margin:0" title="Upload step photo">
+        📷 Upload Photo
+        <input type="file" class="step-upload-file" accept="image/jpeg,image/png,image/webp" style="display:none"/>
+      </label>
+      <button type="button" class="btn btn-light clear-step-image" style="padding:4px 8px;font-size:12px;${hasImg ? '' : 'display:none'}" title="Remove photo">Remove</button>
+    </div>
+    <div class="step-image-preview" style="margin-top:4px;${hasImg ? '' : 'display:none'}">
+      <img src="${esc(step.image || '')}" alt="Step preview" style="max-height:80px;max-width:140px;border-radius:var(--radius-sm);object-fit:cover;border:1px solid var(--line)" />
+    </div>
   </div>`;
 }
 
@@ -187,22 +212,48 @@ function groupIngredientsBySection(ingredients: any[] = []) {
 function recipeForm(r: any) {
   const categories = cache.categories?.data || [];
   const categoryOptions = categories.length ? categories : [];
+  const predefinedTags: string[] = cache.tags?.data || [];
+  const recipeTags: string[] = Array.isArray(r?.tags) ? r.tags : [];
+  const allTagNames: string[] = [...predefinedTags];
+  recipeTags.forEach((t: string) => {
+    if (t && !allTagNames.some((p) => p.toLowerCase() === t.toLowerCase())) {
+      allTagNames.push(t);
+    }
+  });
+  const selectedTagSet = new Set(recipeTags.map((t: string) => String(t).toLowerCase()));
   const ingredientSections = groupIngredientsBySection(r?.ingredients);
   const stepsList = r?.steps && r.steps.length ? r.steps : [{ title: '', text: '' }];
 
   return `<form class="admin-form" id="recipe-form">
-    <label>Recipe title<input name="title" required maxlength="140" value="${esc(r?.title)}" placeholder="e.g. Andhra Chicken Curry"/></label>
-    <label>Slug (URL, fixed after first save)<input name="slug" ${
+    <label>Recipe title<input name="title" id="recipe-title" required maxlength="140" value="${esc(r?.title)}" placeholder="e.g. Andhra Chicken Curry"/></label>
+    <label>Slug (URL, auto-generated from title)<input name="slug" id="recipe-slug" ${
       r ? 'readonly' : ''
     } placeholder="andhra-chicken-curry" value="${esc(r?.slug)}"/></label>
     <label>Description<textarea name="description" placeholder="A short, inviting description of this dish">${esc(r?.description)}</textarea></label>
+    <label>Story / Background (optional)<textarea name="story" rows="4" placeholder="Share the background, memory, or cultural story behind this dish...">${esc(r?.story || '')}</textarea><span class="field-note">Displays as an editorial story box right above the ingredients checklist.</span></label>
     <label>Category<select name="category" id="recipe-category" required><option value="">Choose category</option>${categoryOptions
       .map(
         (c: any) =>
           `<option value="${esc(c.slug)}" ${r?.category === c.slug ? 'selected' : ''}>${esc(c.name)}</option>`,
       )
       .join('')}</select></label>
-    <label>Tags (comma-separated)<input name="tags" placeholder="e.g. Andhra, Spicy, Dinner, Chicken" value="${esc(r?.tags?.join(', '))}"/></label>
+
+    <div style="margin-top:12px;margin-bottom:12px;">
+      <label style="font-weight:600;margin-bottom:6px;display:block">Tags (select from list or add new)</label>
+      <div id="recipe-tag-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+        ${allTagNames
+          .map((tag: string) => {
+            const isSelected = selectedTagSet.has(tag.toLowerCase());
+            return `<button type="button" class="tag-chip ${isSelected ? 'tag-chip-selected' : ''}" data-tag="${esc(tag)}">${isSelected ? '✓ ' : '+ '}${esc(tag)}</button>`;
+          })
+          .join('')}
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="custom-tag-input" placeholder="Type custom tag and click Add..." style="flex:1;max-width:240px;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);"/>
+        <button type="button" class="btn btn-outline" id="add-custom-tag-btn" style="padding:6px 12px;font-size:13px;">+ Add Tag</button>
+      </div>
+    </div>
+
     <label>Diet<select name="diet"><option ${
       r?.diet === 'Vegetarian' ? 'selected' : ''
     }>Vegetarian</option><option ${
@@ -222,6 +273,19 @@ function recipeForm(r: any) {
       <label>Difficulty<select name="difficulty">${['Easy', 'Medium', 'Hard']
         .map((v) => `<option ${r?.difficulty === v ? 'selected' : ''}>${v}</option>`)
         .join('')}</select></label>
+    </div>
+
+    <!-- Nutrition Information (Optional) -->
+    <div style="margin-top:14px;background:var(--cream);border:1px solid var(--line);border-radius:var(--radius-card);padding:14px 16px;">
+      <div class="admin-builder-title" style="margin-bottom:4px">Nutrition Information (optional)</div>
+      <div class="field-note" style="margin-bottom:10px">Optional nutrient values (Calories, Carbs, Protein, Fat, Fiber). Displays on recipe page and enhances Google Recipe badges.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px">
+        <label style="font-size:12px">Calories (kcal)<input type="number" min="0" step="1" name="nutrition_calories" placeholder="e.g. 320" value="${esc(r?.nutrition?.calories ?? '')}"/></label>
+        <label style="font-size:12px">Carbs (g)<input type="number" min="0" step="0.1" name="nutrition_carbs" placeholder="e.g. 24" value="${esc(r?.nutrition?.carbs ?? '')}"/></label>
+        <label style="font-size:12px">Protein (g)<input type="number" min="0" step="0.1" name="nutrition_protein" placeholder="e.g. 28" value="${esc(r?.nutrition?.protein ?? '')}"/></label>
+        <label style="font-size:12px">Fiber (g)<input type="number" min="0" step="0.1" name="nutrition_fiber" placeholder="e.g. 4" value="${esc(r?.nutrition?.fiber ?? '')}"/></label>
+        <label style="font-size:12px">Fat (g)<input type="number" min="0" step="0.1" name="nutrition_fat" placeholder="e.g. 12" value="${esc(r?.nutrition?.fat ?? '')}"/></label>
+      </div>
     </div>
 
     <!-- Structured Ingredients Section -->
@@ -251,8 +315,20 @@ function recipeForm(r: any) {
     <label style="margin-top:12px">Cooking tips (one per line)<textarea name="tips" rows="3" placeholder="e.g. Adjust spice to taste.">${esc(r?.tips?.join('\n'))}</textarea></label>
     <label>Serve with (comma-separated)<input name="serveWith" placeholder="e.g. Steamed Rice, Roti, Sambar" value="${esc(r?.serveWith?.join(', '))}"/></label>
     <label>YouTube URL (optional)<input name="youtubeUrl" type="url" placeholder="https://youtube.com/watch?v=..." value="${esc(r?.youtubeUrl)}"/></label>
-    <label><input type="checkbox" name="featured" ${r?.featured ? 'checked' : ''}/> Feature on homepage</label>
-    <label><input type="checkbox" name="published" ${r?.published !== false ? 'checked' : ''}/> Publish now (uncheck to save draft)</label>
+    <div style="margin-top:16px;background:var(--cream);border:1px solid var(--line);border-radius:var(--radius-card);padding:14px 16px;">
+      <div class="admin-builder-title" style="margin-bottom:8px">Publishing Status</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;">
+          <input type="checkbox" name="published" ${r?.published !== false ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--primary);"/>
+          <span>Publish recipe (Live on site)</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+          <input type="checkbox" name="featured" ${r?.featured ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--primary);"/>
+          <span>Feature on homepage</span>
+        </label>
+      </div>
+      <div class="field-note" style="margin-top:6px;">Uncheck "Publish recipe" only if you want to keep this recipe as an unpublished draft.</div>
+    </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
       <button class="btn" type="submit">${r ? 'Save changes' : 'Create recipe'}</button>
@@ -292,27 +368,47 @@ function formData(f: HTMLFormElement) {
   });
 
   // Extract structured step sections
-  const steps: { title: string; text: string }[] = [];
+  const steps: { title: string; text: string; image?: string }[] = [];
   f.querySelectorAll<HTMLElement>('[data-step-section]').forEach((stepEl) => {
     const title = (stepEl.querySelector<HTMLInputElement>('.step-title-input')?.value || '').trim();
     const text = (stepEl.querySelector<HTMLTextAreaElement>('.step-text-input')?.value || '').trim();
+    const image = (stepEl.querySelector<HTMLInputElement>('.step-image-input')?.value || '').trim();
     if (title || text) {
       steps.push({
         title: title || 'Step',
         text,
+        ...(image ? { image } : {}),
       });
     }
   });
+
+  // Extract optional nutrition details
+  const numOrNull = (k: string) => {
+    const val = text(k);
+    return val !== '' && !isNaN(Number(val)) ? Number(val) : undefined;
+  };
+
+  const nutritionRaw = {
+    calories: numOrNull('nutrition_calories'),
+    carbs: numOrNull('nutrition_carbs'),
+    protein: numOrNull('nutrition_protein'),
+    fat: numOrNull('nutrition_fat'),
+    fiber: numOrNull('nutrition_fiber'),
+  };
+
+  const nutrition = Object.values(nutritionRaw).some((v) => v !== undefined)
+    ? Object.fromEntries(Object.entries(nutritionRaw).filter(([_, v]) => v !== undefined))
+    : undefined;
 
   return {
     title: text('title'),
     slug: text('slug'),
     description: text('description'),
     category: text('category'),
-    tags: text('tags')
-      .split(',')
-      .map((x) => x.trim())
+    tags: Array.from(f.querySelectorAll<HTMLElement>('.tag-chip.tag-chip-selected'))
+      .map((chip) => chip.getAttribute('data-tag')?.trim() || '')
       .filter(Boolean),
+    story: text('story') || undefined,
     diet: text('diet'),
     prepTime: Number(text('prepTime')),
     cookTime: Number(text('cookTime')),
@@ -323,6 +419,7 @@ function formData(f: HTMLFormElement) {
     featured: d.has('featured'),
     ingredients,
     steps,
+    ...(nutrition ? { nutrition } : {}),
     tips: lines(text('tips')),
     serveWith: text('serveWith')
       .split(',')
@@ -334,6 +431,76 @@ function formData(f: HTMLFormElement) {
 
 function wireRecipeForm(r: any) {
   const form = el('recipe-form') as HTMLFormElement;
+
+  // Title to Slug auto-generation for new recipes
+  const titleInput = el('recipe-title') as HTMLInputElement;
+  const slugInput = el('recipe-slug') as HTMLInputElement;
+  if (titleInput && slugInput && !r) {
+    let userModifiedSlug = Boolean(slugInput.value.trim());
+    slugInput.addEventListener('input', () => {
+      userModifiedSlug = slugInput.value.trim().length > 0;
+    });
+    titleInput.addEventListener('input', () => {
+      if (!userModifiedSlug) {
+        slugInput.value = titleInput.value
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+    });
+  }
+
+  // Multi-select Tag Chips interaction
+  const tagChipsContainer = el('recipe-tag-chips');
+  if (tagChipsContainer) {
+    tagChipsContainer.addEventListener('click', (e) => {
+      const chip = (e.target as HTMLElement).closest<HTMLButtonElement>('.tag-chip');
+      if (!chip) return;
+      const tagName = chip.getAttribute('data-tag') || '';
+      const isSelected = chip.classList.contains('tag-chip-selected');
+      if (isSelected) {
+        chip.classList.remove('tag-chip-selected');
+        chip.textContent = '+ ' + tagName;
+      } else {
+        chip.classList.add('tag-chip-selected');
+        chip.textContent = '✓ ' + tagName;
+      }
+    });
+  }
+
+  // Add Custom Tag button
+  const customTagInput = el('custom-tag-input') as HTMLInputElement;
+  const addCustomTagBtn = el('add-custom-tag-btn');
+  if (customTagInput && addCustomTagBtn && tagChipsContainer) {
+    const addCustomTag = () => {
+      const val = customTagInput.value.trim();
+      if (!val) return;
+      const existing = tagChipsContainer.querySelector<HTMLButtonElement>(`[data-tag="${val}"]`);
+      if (existing) {
+        if (!existing.classList.contains('tag-chip-selected')) {
+          existing.classList.add('tag-chip-selected');
+          existing.textContent = '✓ ' + val;
+        }
+      } else {
+        const newChip = document.createElement('button');
+        newChip.type = 'button';
+        newChip.className = 'tag-chip tag-chip-selected';
+        newChip.setAttribute('data-tag', val);
+        newChip.textContent = '✓ ' + val;
+        tagChipsContainer.appendChild(newChip);
+      }
+      customTagInput.value = '';
+    };
+
+    addCustomTagBtn.onclick = addCustomTag;
+    customTagInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCustomTag();
+      }
+    });
+  }
 
   // Add Ingredient Section button
   const addIngSecBtn = el('add-ing-section');
@@ -400,6 +567,84 @@ function wireRecipeForm(r: any) {
         stepBox?.remove();
       } else if (stepBox) {
         stepBox.querySelectorAll('input, textarea').forEach((inp: any) => (inp.value = ''));
+        const previewBox = stepBox.querySelector<HTMLElement>('.step-image-preview');
+        if (previewBox) previewBox.style.display = 'none';
+        const clearBtn = stepBox.querySelector<HTMLElement>('.clear-step-image');
+        if (clearBtn) clearBtn.style.display = 'none';
+      }
+    }
+
+    // Clear step image
+    if (target.classList.contains('clear-step-image')) {
+      const stepBox = target.closest<HTMLElement>('[data-step-section]');
+      if (stepBox) {
+        const imgInput = stepBox.querySelector<HTMLInputElement>('.step-image-input');
+        if (imgInput) imgInput.value = '';
+        const previewBox = stepBox.querySelector<HTMLElement>('.step-image-preview');
+        if (previewBox) previewBox.style.display = 'none';
+        target.style.display = 'none';
+      }
+    }
+  });
+
+  // Step photo upload handler
+  form.addEventListener('change', async (e) => {
+    const target = e.target as HTMLInputElement;
+    if (target.classList.contains('step-upload-file')) {
+      const file = target.files?.[0];
+      if (!file) return;
+      if (file.size > 4 * 1024 * 1024) {
+        notice('Step photo must be smaller than 4 MB.', true);
+        return;
+      }
+      try {
+        notice('Uploading step photo...');
+        const data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const result = await api('image', 'POST', { name: 'step-' + file.name, type: file.type, content: data });
+        const stepBox = target.closest<HTMLElement>('[data-step-section]');
+        if (stepBox) {
+          const imgInput = stepBox.querySelector<HTMLInputElement>('.step-image-input');
+          if (imgInput) imgInput.value = result.path;
+          const previewBox = stepBox.querySelector<HTMLElement>('.step-image-preview');
+          const previewImg = previewBox?.querySelector<HTMLImageElement>('img');
+          if (previewBox && previewImg) {
+            previewImg.src = result.path;
+            previewBox.style.display = 'block';
+          }
+          const clearBtn = stepBox.querySelector<HTMLElement>('.clear-step-image');
+          if (clearBtn) clearBtn.style.display = 'inline-block';
+        }
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        notice(isLocal ? 'Step photo saved locally. Save the recipe next.' : 'Step photo uploaded to GitHub. Save the recipe next.');
+      } catch (err) {
+        notice(String(err), true);
+      }
+    }
+  });
+
+  // Step image URL manual input handler
+  form.addEventListener('input', (e) => {
+    const target = e.target as HTMLInputElement;
+    if (target.classList.contains('step-image-input')) {
+      const stepBox = target.closest<HTMLElement>('[data-step-section]');
+      if (stepBox) {
+        const val = target.value.trim();
+        const previewBox = stepBox.querySelector<HTMLElement>('.step-image-preview');
+        const previewImg = previewBox?.querySelector<HTMLImageElement>('img');
+        const clearBtn = stepBox.querySelector<HTMLElement>('.clear-step-image');
+        if (val && previewBox && previewImg) {
+          previewImg.src = val;
+          previewBox.style.display = 'block';
+          if (clearBtn) clearBtn.style.display = 'inline-block';
+        } else if (previewBox) {
+          previewBox.style.display = 'none';
+          if (clearBtn) clearBtn.style.display = 'none';
+        }
       }
     }
   });
@@ -429,12 +674,25 @@ function wireRecipeForm(r: any) {
       notice('Use an English-letter slug for the recipe URL.', true);
       return;
     }
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     try {
-      notice('Saving recipe to GitHub...');
+      notice(isLocal ? 'Saving recipe locally...' : 'Saving recipe to GitHub...');
       await api('recipes/' + slug, 'POST', { recipe: value, sha: r?._sha });
       editing = null;
       await load();
-      notice('Saved to GitHub. The public website will update after the next successful deployment.');
+      if (isLocal) {
+        notice(
+          value.published
+            ? `Recipe published locally! View live at /recipes/${slug}/`
+            : `Recipe saved as draft locally (hidden from public listings).`,
+        );
+      } else {
+        notice(
+          value.published
+            ? 'Saved to GitHub. The public website will update after the next successful deployment.'
+            : 'Draft saved to GitHub.',
+        );
+      }
     } catch (e) {
       notice(String(e), true);
     }
@@ -450,6 +708,7 @@ function wireRecipeForm(r: any) {
       notice('Photo must be smaller than 4 MB.', true);
       return;
     }
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     try {
       notice('Uploading photo...');
       const data = await new Promise<string>((resolve, reject) => {
@@ -460,7 +719,7 @@ function wireRecipeForm(r: any) {
       });
       const result = await api('image', 'POST', { name: file.name, type: file.type, content: data });
       (el('recipe-image') as HTMLInputElement).value = result.path;
-      notice('Photo uploaded to GitHub. Save the recipe next.');
+      notice(isLocal ? 'Photo saved locally to public/images/recipes/. Save the recipe next.' : 'Photo uploaded to GitHub. Save the recipe next.');
     } catch (e) {
       notice(String(e), true);
     }
@@ -471,11 +730,12 @@ function wireRecipeForm(r: any) {
     if (delBtn) {
       delBtn.onclick = async () => {
         if (!confirm(`Delete ${r.title}? This cannot be undone.`)) return;
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
         try {
           await api('recipes/' + r.slug, 'DELETE', { sha: r._sha });
           editing = null;
           await load();
-          notice('Recipe removed from GitHub. A rebuild will update the website.');
+          notice(isLocal ? 'Recipe removed locally.' : 'Recipe removed from GitHub. A rebuild will update the website.');
         } catch (e) {
           notice(String(e), true);
         }
