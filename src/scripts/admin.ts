@@ -4,7 +4,8 @@ const content = el('admin-content'),
   message = el('admin-message');
 let tab = 'recipes',
   cache: Record<string, any> = {},
-  editing: string | null = null;
+  editing: string | null = null,
+  csrfToken = '';
 
 const esc = (v: any) =>
   String(v ?? '').replace(
@@ -39,7 +40,10 @@ async function api(path: string, method = 'GET', data?: any) {
   try {
     const res = await fetch('/api/admin/' + path, {
       method,
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+      },
       ...(method !== 'GET' ? { body: JSON.stringify(data) } : {}),
     });
     const contentType = res.headers.get('content-type') || '';
@@ -48,13 +52,14 @@ async function api(path: string, method = 'GET', data?: any) {
         throw Error(
           'Admin API endpoint (/api/admin/' +
             path +
-            ') is not available in static mode without Cloudflare Worker.',
+            ') is not available.',
         );
       }
       throw Error(`Unexpected response (${res.status} ${res.statusText})`);
     }
     const body = await res.json();
     if (!res.ok) throw Error(body.error || 'Unable to save');
+    if (body.csrf_token) csrfToken = body.csrf_token;
     return body;
   } catch (err: any) {
     throw Error(err?.message || String(err));
@@ -80,8 +85,8 @@ async function load() {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     notice(
       isLocal
-        ? 'Ready (Local Development Mode). Changes save directly to your local project files.'
-        : 'Ready. Changes publish through GitHub and your Cloudflare deployment pipeline.',
+        ? 'Ready (Local Mode). Changes save directly to database & generate static files.'
+        : 'Ready (Hostinger Native). Saved recipes generate live static HTML pages immediately.',
     );
   } catch (e: any) {
     notice(String(e?.message || e), true);
@@ -263,8 +268,8 @@ function recipeForm(r: any) {
       r?.image || '/images/recipes/andhra-chicken-curry.png',
     )}"/></label>
     <label>Upload new recipe photo (JPG, PNG, WebP; max 4 MB)<input type="file" id="photo" accept="image/jpeg,image/png,image/webp"/></label>
-    <button class="btn btn-light" type="button" id="upload-photo">Upload photo to GitHub</button>
-    <div class="field-note">Upload before saving the recipe. An uploaded photo becomes public after deployment.</div>
+    <button class="btn btn-light" type="button" id="upload-photo">Upload photo</button>
+    <div class="field-note">Upload before saving the recipe. The photo is stored on the server; it only appears on a public page once the recipe is published.</div>
 
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
       <label>Prep minutes<input type="number" min="0" name="prepTime" value="${esc(r?.prepTime ?? 15)}"/></label>
@@ -620,7 +625,7 @@ function wireRecipeForm(r: any) {
           if (clearBtn) clearBtn.style.display = 'inline-block';
         }
         const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-        notice(isLocal ? 'Step photo saved locally. Save the recipe next.' : 'Step photo uploaded to GitHub. Save the recipe next.');
+        notice(isLocal ? 'Step photo saved locally. Save the recipe next.' : 'Step photo uploaded. Save the recipe next.');
       } catch (err) {
         notice(String(err), true);
       }
@@ -676,7 +681,7 @@ function wireRecipeForm(r: any) {
     }
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     try {
-      notice(isLocal ? 'Saving recipe locally...' : 'Saving recipe to GitHub...');
+      notice(isLocal ? 'Saving recipe locally...' : 'Saving recipe...');
       await api('recipes/' + slug, 'POST', { recipe: value, sha: r?._sha });
       editing = null;
       await load();
@@ -689,8 +694,8 @@ function wireRecipeForm(r: any) {
       } else {
         notice(
           value.published
-            ? 'Saved to GitHub. The public website will update after the next successful deployment.'
-            : 'Draft saved to GitHub.',
+            ? `Saved and published. The page is live at /recipes/${slug}/`
+            : 'Draft saved. It is not visible on the public site.',
         );
       }
     } catch (e) {
@@ -719,7 +724,7 @@ function wireRecipeForm(r: any) {
       });
       const result = await api('image', 'POST', { name: file.name, type: file.type, content: data });
       (el('recipe-image') as HTMLInputElement).value = result.path;
-      notice(isLocal ? 'Photo saved locally to public/images/recipes/. Save the recipe next.' : 'Photo uploaded to GitHub. Save the recipe next.');
+      notice(isLocal ? 'Photo saved locally to public/images/recipes/. Save the recipe next.' : 'Photo uploaded. Save the recipe next.');
     } catch (e) {
       notice(String(e), true);
     }
@@ -735,7 +740,7 @@ function wireRecipeForm(r: any) {
           await api('recipes/' + r.slug, 'DELETE', { sha: r._sha });
           editing = null;
           await load();
-          notice(isLocal ? 'Recipe removed locally.' : 'Recipe removed from GitHub. A rebuild will update the website.');
+          notice(isLocal ? 'Recipe removed locally.' : 'Recipe removed and its public page deleted.');
         } catch (e) {
           notice(String(e), true);
         }
@@ -795,7 +800,7 @@ function renderConfig() {
       notice('Saving...');
       await api(tab, 'POST', { sha: entry.sha, data });
       await load();
-      notice('Saved successfully. Cloudflare will deploy the updated site.');
+      notice('Saved and published. The public site is updated.');
     } catch (e) {
       notice(String(e), true);
     }
@@ -816,7 +821,7 @@ function configRow(row: Item, columns: string[]) {
           <input data-key="image" value="${esc(row.image || row.emoji || '')}" placeholder="/images/categories/..." aria-label="image" style="max-width:160px"/>
           <label class="btn btn-outline" style="padding:4px 8px;font-size:12px;cursor:pointer;white-space:nowrap;margin:0" title="Upload category icon/image">
             Upload
-            <input type="file" class="cat-upload-file" accept="image/jpeg,image/png,image/webp,image/svg+xml" style="display:none"/>
+            <input type="file" class="cat-upload-file" accept="image/jpeg,image/png,image/webp" style="display:none"/>
           </label>
         </div></td>`;
       }
@@ -888,9 +893,102 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-tab]'))
   };
 }
 
+function renderLoginForm() {
+  content.classList.remove('hidden');
+  content.innerHTML = `
+    <div style="max-width:420px;margin:24px auto;padding:28px 24px;background:var(--white);border:1px solid var(--line);border-radius:var(--radius-card);box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+      <div style="text-align:center;margin-bottom:20px;">
+        <h2 style="font-family:var(--font-sans);font-size:1.4rem;margin:0 0 6px;color:var(--primary);">Admin Login</h2>
+        <p class="muted" style="font-size:13px;margin:0;">Enter your JyoCanCook administrator credentials</p>
+      </div>
+      <form id="admin-login-form" style="display:flex;flex-direction:column;gap:14px;">
+        <label style="font-size:13px;font-weight:600;display:flex;flex-direction:column;gap:6px;">
+          Username or Email
+          <input type="text" id="login-username" required placeholder="jyocancook-admin" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:14px;"/>
+        </label>
+        <label style="font-size:13px;font-weight:600;display:flex;flex-direction:column;gap:6px;">
+          Password
+          <input type="password" id="login-password" required placeholder="••••••••" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:14px;"/>
+        </label>
+        <button class="btn" type="submit" style="margin-top:8px;padding:10px;font-size:14px;font-weight:600;">Sign In →</button>
+      </form>
+    </div>
+  `;
+
+  const loginForm = document.getElementById('admin-login-form') as HTMLFormElement;
+  if (loginForm) {
+    loginForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const username = (document.getElementById('login-username') as HTMLInputElement)?.value.trim();
+      const password = (document.getElementById('login-password') as HTMLInputElement)?.value;
+      if (!username || !password) {
+        notice('Please enter username and password', true);
+        return;
+      }
+      try {
+        notice('Signing in...');
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw Error(data.error || 'Invalid credentials');
+        }
+        if (data.csrf_token) csrfToken = data.csrf_token;
+        const userEl = document.getElementById('admin-user-info');
+        if (userEl && data.user) {
+          userEl.textContent = `Logged in as @${data.user.login || data.user.name}`;
+        }
+        await load();
+      } catch (err: any) {
+        notice(String(err?.message || err), true);
+      }
+    };
+  }
+}
+
+// Logout is a state-changing request: send it as POST with the CSRF token (not a plain link).
+const logoutBtn = document.getElementById('btn-logout');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: '{}',
+      });
+    } finally {
+      location.href = '/admin/';
+    }
+  });
+}
+
+// Rebuild All Static Pages button handler
+const rebuildBtn = document.getElementById('btn-rebuild-site');
+if (rebuildBtn) {
+  rebuildBtn.onclick = async () => {
+    if (!confirm('Rebuild and publish all static pages and search indexes now?')) return;
+    try {
+      notice('Regenerating all static HTML pages...');
+      const res = await api('publish', 'POST', {});
+      const count = res.stats?.pages_generated ?? '';
+      notice(`Successfully regenerated ${count} static pages! Site is up to date.`);
+    } catch (e: any) {
+      notice('Generation error: ' + String(e?.message || e), true);
+    }
+  };
+}
+
 (async () => {
   try {
     const status = await api('status');
+    if (status.csrf_token) csrfToken = status.csrf_token;
     const userEl = document.getElementById('admin-user-info');
     if (userEl && status.user) {
       userEl.textContent = `Logged in as @${status.user.login || status.user.id}`;
@@ -899,11 +997,11 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-tab]'))
     await load();
   } catch (e: any) {
     const msg = String(e?.message || e);
-    if (msg.includes('401') || msg.includes('Not authenticated')) {
-      notice('You are not logged in. Redirecting to GitHub login...', true);
-      window.location.href = '/api/auth/login';
+    if (msg.includes('401') || msg.includes('Login required') || msg.includes('Authentication required')) {
+      notice('Please log in with your administrator password.');
+      renderLoginForm();
       return;
     }
-    notice('Admin access is not yet configured or you are not logged in. ' + msg, true);
+    notice('Admin access is not ready: ' + msg, true);
   }
 })();

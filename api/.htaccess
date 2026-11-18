@@ -1,0 +1,18 @@
+# Route all /api/* requests to index.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # The optional server-side gateway settings must never be downloadable.
+    RewriteRule ^config\.local\.php$ - [F,L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+<Files "config.local.php">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</Files>

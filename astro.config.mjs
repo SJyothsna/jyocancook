@@ -143,7 +143,7 @@ function adminDevPlugin() {
 }
 
 export default defineConfig({
-  site: 'https://jyocancook.com',
+  site: process.env.SITE_URL || 'https://jyocancook.com',
   output: 'static',
   integrations: [sitemap()],
   vite: {

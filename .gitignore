@@ -7,3 +7,10 @@ dist/
 .env.*
 *.log
 .DS_Store
+deploy/
+
+# Server-only configuration (credentials). Created on Hostinger, never committed.
+**/config.local.php
+
+# IDE settings
+.idea/
