@@ -1,6 +1,6 @@
 ---
 import { categoryName, recipeUrl, type Recipe } from '../lib/data';
-import { Clock, Heart } from '@lucide/astro';
+import { Clock } from '@lucide/astro';
 
 const { recipe } = Astro.props as { recipe: Recipe };
 const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
@@ -16,9 +16,6 @@ const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
   <div class="recipe-card-content">
     <div class="recipe-card-header">
       <h3>{recipe.title}</h3>
-      <button type="button" class="recipe-fav-btn" aria-label={`Save ${recipe.title} to favourites`}>
-        <Heart size={18} aria-hidden="true" />
-      </button>
     </div>
     <div class="recipe-card-meta">
       <span>{categoryName(recipe.category)}</span>

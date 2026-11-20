@@ -4,42 +4,48 @@
     "name": "Breakfast",
     "description": "Start your day with something delicious",
     "image": "/images/categories/breakfast.svg",
-    "order": 1
+    "order": 1,
+    "subcategories": ["vegetarian", "non-vegetarian"]
   },
   {
     "slug": "rice-biryani",
     "name": "Rice & Biryani",
     "description": "Fragrant rice favourites",
     "image": "/images/categories/rice-biryani.svg",
-    "order": 2
+    "order": 2,
+    "subcategories": ["vegetarian", "non-vegetarian"]
   },
   {
     "slug": "curries",
     "name": "Curries",
     "description": "Comforting curries and gravies",
     "image": "/images/categories/curries.svg",
-    "order": 3
+    "order": 3,
+    "subcategories": ["vegetarian", "non-vegetarian"]
   },
   {
     "slug": "chutneys",
     "name": "Chutneys",
     "description": "Fresh, spicy sides",
     "image": "/images/categories/chutneys.svg",
-    "order": 4
+    "order": 4,
+    "subcategories": ["vegetarian", "non-vegetarian"]
   },
   {
     "slug": "snacks",
     "name": "Snacks",
     "description": "Tea-time bites and more",
     "image": "/images/categories/snacks.svg",
-    "order": 5
+    "order": 5,
+    "subcategories": ["vegetarian", "non-vegetarian"]
   },
   {
     "slug": "sweets",
     "name": "Sweets",
     "description": "Desserts for every occasion",
     "image": "/images/categories/sweets.svg",
-    "order": 6
+    "order": 6,
+    "subcategories": ["vegetarian", "non-vegetarian"]
   },
   {
     "slug": "vegetarian",

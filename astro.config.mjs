@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { sanitizeRecipe, sanitizeConfig } from './worker/index.ts';
+import { sanitizeRecipe, sanitizeConfig } from './src/lib/admin-sanitize.ts';
 
 function adminDevPlugin() {
   return {
@@ -53,7 +53,7 @@ function adminDevPlugin() {
             });
           }
 
-          if (['categories', 'menu', 'tags'].includes(type)) {
+          if (['categories', 'subcategories', 'menu', 'tags'].includes(type)) {
             const filePath = path.join(process.cwd(), `config/${type}.json`);
             if (req.method === 'GET') {
               const content = await fs.readFile(filePath, 'utf-8');
@@ -95,7 +95,14 @@ function adminDevPlugin() {
                 const body = await readJson();
                 const validated = sanitizeRecipe(body.recipe);
                 const targetFile = path.join(recipeDir, `${validated.slug}.json`);
-                await fs.writeFile(targetFile, JSON.stringify(validated, null, 2) + '\n', 'utf-8');
+                // Like the PHP backend: stamp the publish date once, keep it on later saves.
+                let publishedAt;
+                try {
+                  publishedAt = JSON.parse(await fs.readFile(targetFile, 'utf-8')).publishedAt;
+                } catch {}
+                if (!publishedAt && validated.published) publishedAt = new Date().toISOString();
+                const toSave = publishedAt ? { ...validated, publishedAt } : validated;
+                await fs.writeFile(targetFile, JSON.stringify(toSave, null, 2) + '\n', 'utf-8');
                 return sendJson({ ok: true, slug: validated.slug });
               }
 

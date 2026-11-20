@@ -3,6 +3,9 @@
   "title": "Chicken Kurma Restaurant style",
   "description": "One Pot Simple yet tasty Reicipe. Restaurant style and no fail curry.",
   "category": "curries",
+  "subcategories": [
+    "vegetarian"
+  ],
   "tags": [
     "Chicken",
     "Restaurant Style",
@@ -16,7 +19,7 @@
   "image": "/images/recipes/chicken-kurma-mwkyoqkz.png",
   "published": true,
   "featured": true,
-  "story": "This rich and flavourful chicken curry is one of my favourite dishes to prepare for a special family meal. Tender chicken is slow-cooked with aromatic spices, creamy cashew and coconut paste, fried onions, and a touch of saffron milk. As it simmers, the kitchen fills with irresistible aromas, bringing everyone closer to the dining table. It’s a comforting, restaurant-style dish made with love at home.",
+  "story": "This rich and flavourful chicken curry is one of my favourite dishes to prepare for a special family meal. Tender chicken is slow-cooked with aromatic spices, creamy cashew and coconut paste, fried onions, and a touch of saffron milk. As it simmers, the kitchen fills with irresistible aromas, bringing everyone closer to the dining table. Itâ€™s a comforting, restaurant-style dish made with love at home.",
   "ingredients": [
     {
       "amount": 750,
@@ -48,5 +51,6 @@
   "tips": [],
   "serveWith": [
     "Rice and Roti"
-  ]
+  ],
+  "publishedAt": "2026-11-19T21:22:20.514Z"
 }

@@ -2,11 +2,20 @@
 import Base from '../layouts/Base.astro';
 import RecipeCard from '../components/RecipeCard.astro';
 import SectionFlourish from '../components/icons/SectionFlourish.astro';
-import { recipes } from '../lib/data';
+import { recipes, subcategories as allSubcategories } from '../lib/data';
 import { Utensils } from '@lucide/astro';
 
-const featured = recipes.filter((x) => x.featured);
-const latestRecipes = (featured.length >= 4 ? featured : recipes).slice(0, 8);
+// Newest published first; recipes without a date keep their title order after the dated ones.
+const newestFirst = [...recipes].sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+const latestRecipes = newestFirst.slice(0, 8);
+
+// One box per subcategory in use: the newest recipe's photo and the recipe count.
+const subcategories = [...new Map(allSubcategories.map((s) => [s.slug, s.name])).entries()]
+  .map(([slug, name]) => {
+    const items = newestFirst.filter((r) => r.subcategories?.includes(slug));
+    return { slug, name, count: items.length, image: items[0]?.image };
+  })
+  .filter((s) => s.count > 0);
 ---
 <Base title="Authentic Homemade Indian Recipes">
   <!-- Hero Section -->
@@ -22,15 +31,45 @@ const latestRecipes = (featured.length >= 4 ? featured : recipes).slice(0, 8);
           <span>Explore Recipes →</span>
         </a>
       </div>
-      <div class="hero-photo-wrap">
-        <img
-          class="hero-photo"
-          src="/images/recipes/andhra-chicken-curry.png"
-          alt="Authentic Homemade Andhra Chicken Curry"
-        />
-      </div>
+      <aside class="hero-about panel panel-warm">
+        <div class="hero-about-inner">
+          <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" /></div>
+          <div class="about-text">
+            <h2>About me</h2>
+            <p>Cooking is my passion, and I believe great taste doesn't need complicated recipes. Through JyoCanCook, I share simple, authentic recipes inspired by our elders, keeping the flavours of home alive for the younger generation to enjoy and cherish.</p>
+            <p><em>Simple to cook. Rich in flavour. Rooted in tradition.</em></p>
+            <a class="link" href="/about/">Read more →</a>
+          </div>
+        </div>
+      </aside>
     </section>
   </div>
+
+  <!-- Subcategories -->
+  {subcategories.length > 0 && (
+    <div class="container">
+      <section class="section subcat-section">
+        <div class="section-heading-centered">
+          <div class="section-title-flourish">
+            <SectionFlourish side="left" class="flourish-icon" />
+            <h2 class="section-title">Browse by Subcategory</h2>
+            <SectionFlourish side="right" class="flourish-icon" />
+          </div>
+        </div>
+        <nav class="subcat-grid" aria-label="Browse by subcategory">
+          {subcategories.map((s) => (
+            <a class="subcat-box" href={`/recipes/?subcategory=${s.slug}`}>
+              <img class="subcat-thumb" src={s.image} alt="" loading="lazy" />
+              <span class="subcat-text">
+                <span class="subcat-name">{s.name}</span>
+                <span class="subcat-count">{s.count} {s.count === 1 ? 'recipe' : 'recipes'}</span>
+              </span>
+            </a>
+          ))}
+        </nav>
+      </section>
+    </div>
+  )}
 
   <!-- Latest Recipes Section -->
   <div class="container">

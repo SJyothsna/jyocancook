@@ -250,6 +250,45 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     }
   });
 
+  it('sub categories are a plain list, mapped to categories, and filter the category pages', async () => {
+    const dup = await post('/api/admin/subcategories', { data: [{ name: 'Veg' }, { name: 'Veg' }] });
+    assert.equal(dup.httpStatusCode, 400, dup.text);
+
+    const ok = await post('/api/admin/subcategories', {
+      data: [{ name: 'Non-Vegetarian', order: 1 }, { name: 'Vegetarian', order: 2 }],
+    });
+    assert.equal(ok.httpStatusCode, 200, ok.text);
+    const list = json(await call(c, 'GET', '/api/admin/subcategories')).data as Array<{ slug: string }>;
+    assert.deepEqual(list.map((x) => x.slug), ['non-vegetarian', 'vegetarian']);
+
+    // Map both sub categories to curries only (the Categories tab).
+    const cats = json(await call(c, 'GET', '/api/admin/categories')).data as Array<{ slug: string; subcategories?: string[] }>;
+    assert.deepEqual(cats.find((x) => x.slug === 'curries')?.subcategories, []);
+    const mapped = await post('/api/admin/categories', {
+      data: cats.map((x) => ({ ...x, subcategories: x.slug === 'curries' ? ['non-vegetarian', 'vegetarian'] : [] })),
+    });
+    assert.equal(mapped.httpStatusCode, 200, mapped.text);
+    const after = json(await call(c, 'GET', '/api/admin/categories')).data as Array<{ slug: string; subcategories: string[] }>;
+    assert.deepEqual(after.find((x) => x.slug === 'curries')?.subcategories, ['non-vegetarian', 'vegetarian']);
+
+    // The imported content has no sub categories; tick one on a curry and one unmapped on a breakfast recipe.
+    const curry = json(await call(c, 'GET', '/api/admin/recipes/andhra-chicken-curry')).recipe;
+    curry.subcategories = ['non-vegetarian'];
+    const tick = await post('/api/admin/recipes/andhra-chicken-curry', { recipe: curry });
+    assert.equal(tick.httpStatusCode, 200, tick.text);
+    const dosa = json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe;
+    dosa.subcategories = ['vegetarian'];
+    const tickDosa = await post('/api/admin/recipes/masala-dosa', { recipe: dosa });
+    assert.equal(tickDosa.httpStatusCode, 200, tickDosa.text);
+
+    // Only sub categories that the page's recipes use are offered, and only on mapped categories.
+    const curries = fs.readFileSync(stagingFile('category/curries/index.html'), 'utf8');
+    assert.match(curries, /data-subcategory="non-vegetarian" aria-pressed="false">Non-Vegetarian</);
+    assert.ok(!curries.includes('>Vegetarian</button>'), 'an unused sub category is not offered');
+    assert.ok(!fs.readFileSync(stagingFile('category/breakfast/index.html'), 'utf8').includes('subcategory-chips'),
+      'a sub category the category does not offer is ignored');
+  });
+
   it('publishing creates the same public URLs as the existing site: /recipes/<slug>/, /category/<slug>/, /tag/<slug>/', async () => {
     const r = await post('/api/admin/publish');
     assert.equal(r.httpStatusCode, 200, r.text);

@@ -492,6 +492,22 @@ try {
             }
         }
 
+        // 4b. Sub categories CRUD (/api/admin/subcategories)
+        if ($subType === 'subcategories') {
+            if ($method === 'GET') {
+                sendJson(['data' => $configService->getSubcategories()]);
+            }
+            if ($method === 'POST') {
+                $body = getJsonBody();
+                $subcategories = $body['data'] ?? $body;
+                $saved = $configService->saveSubcategories(is_array($subcategories) ? $subcategories : []);
+
+                regenerateAfterSave('admin_subcategories_update', $privateLogDir);
+
+                sendJson(['ok' => true, 'data' => $saved]);
+            }
+        }
+
         // 5. Tags CRUD (/api/admin/tags)
         if ($subType === 'tags') {
             if ($method === 'GET') {
@@ -547,6 +563,30 @@ try {
             }
 
             sendJson(['ok' => false, 'error' => 'No image payload provided'], 400);
+        }
+
+        // 7b. Draft preview (/api/admin/preview/{slug}): renders the recipe page, published or not,
+        // for the signed-in admin only. Nothing is written to the public site.
+        if ($subType === 'preview' && $method === 'GET') {
+            $previewSlug = $segments[2] ?? '';
+            $recipe = $previewSlug !== '' ? $recipeService->getRecipeBySlug($previewSlug, false) : null;
+            if (!$recipe) {
+                sendJson(['error' => 'Recipe not found'], 404);
+            }
+            $renderer = new TemplateRenderer();
+            $renderer->setNavMenu($configService->getMenu());
+            $html = $renderer->renderRecipePage(
+                $recipe,
+                $recipeService->getAllRecipes(true),
+                $configService->getCategories(),
+                true
+            );
+            http_response_code(200);
+            header('Content-Type: text/html; charset=utf-8');
+            header('Cache-Control: no-store, no-cache, must-revalidate');
+            header('X-Robots-Tag: noindex, nofollow');
+            echo $html;
+            exit;
         }
 
         // 8. Recipes CRUD (/api/admin/recipes[/{slug}])

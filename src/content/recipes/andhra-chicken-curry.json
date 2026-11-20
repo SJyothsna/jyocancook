@@ -3,6 +3,10 @@
   "title": "Andhra Chicken Curry",
   "description": "A spicy and flavourful Andhra-style chicken curry with onions, tomatoes and aromatic spices.",
   "category": "curries",
+  "subcategories": [
+    "curries",
+    "non-vegetarian"
+  ],
   "tags": [
     "Andhra",
     "Chicken",
@@ -71,8 +75,8 @@
   ],
   "steps": [
     {
-      "title": "Sauté the onions",
-      "text": "Heat oil in a pan. Add the onions and sauté until golden brown."
+      "title": "SautÃ© the onions",
+      "text": "Heat oil in a pan. Add the onions and sautÃ© until golden brown."
     },
     {
       "title": "Add the chicken and spices",
@@ -102,5 +106,6 @@
     "protein": 75,
     "fat": 50,
     "fiber": 50
-  }
+  },
+  "publishedAt": "2026-11-19T21:22:03.357Z"
 }

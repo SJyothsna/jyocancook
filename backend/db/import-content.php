@@ -30,7 +30,7 @@ require_once dirname(__DIR__) . '/services/RecipeService.php';
 
 /** Recipe JSON keys that map to MySQL columns / child tables. Any other key is reported. */
 const IMPORT_KNOWN_RECIPE_KEYS = [
-    'slug', 'title', 'description', 'category', 'tags', 'diet', 'prepTime', 'cookTime', 'servings',
+    'slug', 'title', 'description', 'category', 'subcategories', 'subcategory', 'tags', 'diet', 'prepTime', 'cookTime', 'servings',
     'difficulty', 'image', 'published', 'featured', 'story', 'youtubeUrl', 'nutrition',
     'ingredients', 'steps', 'tips', 'serveWith',
 ];
@@ -231,6 +231,49 @@ function importContent(PDO $pdo, string $configDir, string $recipesDir, array $o
     }
 
     return $result;
+}
+
+/**
+ * Sub categories (slug + name + order) from <configDir>/subcategories.json, imported only
+ * while the subcategories table is empty, so sub categories edited in the admin are never touched.
+ * The category -> sub category mapping (the "subcategories" list of each entry in categories.json)
+ * is imported with them. Returns the number of sub categories added.
+ */
+function importSubcategories(PDO $pdo, string $configDir): int {
+    $file = $configDir . '/subcategories.json';
+    $rows = is_file($file) ? json_decode((string)file_get_contents($file), true) : null;
+    if (!is_array($rows) || !$rows) {
+        return 0;
+    }
+    if ((int)$pdo->query('SELECT COUNT(*) FROM `subcategories`')->fetchColumn() > 0) {
+        return 0;
+    }
+    $stmt = $pdo->prepare('INSERT INTO `subcategories` (`slug`, `name`, `order_num`) VALUES (:slug, :name, :order_num)');
+    $added = 0;
+    foreach ($rows as $row) {
+        $slug = strtolower(trim((string)($row['slug'] ?? '')));
+        $name = trim((string)($row['name'] ?? ''));
+        if ($name === '' || !preg_match('/^[a-z0-9-]{1,80}$/', $slug)) {
+            continue;
+        }
+        $stmt->execute([':slug' => $slug, ':name' => $name, ':order_num' => (int)($row['order'] ?? 0)]);
+        $added++;
+    }
+
+    $categories = is_file($configDir . '/categories.json') ? json_decode((string)file_get_contents($configDir . '/categories.json'), true) : null;
+    if (is_array($categories)) {
+        $link = $pdo->prepare('INSERT INTO `category_subcategories` (`category_slug`, `subcategory_slug`) SELECT c.`slug`, s.`slug` FROM `categories` c, `subcategories` s WHERE c.`slug` = :category AND s.`slug` = :sub');
+        foreach ($categories as $cat) {
+            foreach ((array)($cat['subcategories'] ?? []) as $sub) {
+                try {
+                    $link->execute([':category' => strtolower(trim((string)($cat['slug'] ?? ''))), ':sub' => strtolower(trim((string)$sub))]);
+                } catch (PDOException) {
+                    // already linked
+                }
+            }
+        }
+    }
+    return $added;
 }
 
 /** Seed locations: <backend>/seed when shipped, otherwise the repository (development). */

@@ -3,10 +3,14 @@
   "title": "Masala Dosa",
   "description": "Crispy golden dosa filled with a gently spiced potato masala.",
   "category": "breakfast",
+  "subcategories": [
+    "breakfast",
+    "vegetarian"
+  ],
   "tags": [
+    "Comfort Food",
     "Vegetarian",
-    "Breakfast",
-    "Comfort Food"
+    "Breakfast"
   ],
   "diet": "Vegetarian",
   "prepTime": 15,
@@ -77,5 +81,6 @@
   "serveWith": [
     "Coconut Chutney",
     "Sambar"
-  ]
+  ],
+  "publishedAt": "2026-11-19T10:00:00.000Z"
 }

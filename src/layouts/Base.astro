@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
-import { House, Heart, User, Search, ChevronDown } from '@lucide/astro';
+import { House, Search } from '@lucide/astro';
+import { menu } from '../lib/data';
 
 const {
   title = 'Homemade Indian Recipes',
@@ -31,24 +32,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString();
       <div class="topbar">
         <div class="container topline">
           <a class="logo" href="/" aria-label="JyoCanCook - Home">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#FFF8F1"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M7 3c0 1.5 1.5 1.5 1.5 3" />
-              <path d="M12 3c0 1.5 1.5 1.5 1.5 3" />
-              <path d="M17 3c0 1.5 1.5 1.5 1.5 3" />
-              <path d="M3 10h18" />
-              <path d="M4 10c0 5 3.6 9 8 9s8-4 8-9" />
-              <path d="M8 19h8" />
-            </svg>
+            <img class="logo-img" src="/images/logo.png" alt="" width="64" height="64" />
             <div class="logo-text">
               <span>JyoCanCook</span>
               <small>Homemade Recipes</small>
@@ -66,56 +50,22 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString();
               <Search size={18} aria-hidden="true" />
             </button>
           </form>
-
-          <div class="top-links">
-            <a href="/recipes/" class="top-link">
-              <Heart size={18} aria-hidden="true" />
-              <span>My Recipes</span>
-            </a>
-            <a href="/admin/" rel="nofollow" class="top-link">
-              <User size={18} aria-hidden="true" />
-              <span>Admin</span>
-            </a>
-          </div>
         </div>
       </div>
 
       <div class="nav-shell">
         <nav class="container nav" aria-label="Main navigation">
-          <a href="/" class:list={{ active: Astro.url.pathname === '/' }}>
-            <House size={16} aria-hidden="true" />
-            <span>Home</span>
-          </a>
-          <a href="/recipes/" class:list={{ active: Astro.url.pathname === '/recipes/' }}>
-            <span>Recipes</span>
-            <ChevronDown size={14} aria-hidden="true" />
-          </a>
-          <a href="/category/breakfast/" class:list={{ active: Astro.url.pathname.includes('/category/breakfast') }}>
-            Breakfast
-          </a>
-          <a href="/category/rice-biryani/" class:list={{ active: Astro.url.pathname.includes('/category/rice-biryani') }}>
-            Rice &amp; Biryani
-          </a>
-          <a href="/category/curries/" class:list={{ active: Astro.url.pathname.includes('/category/curries') }}>
-            Curries
-          </a>
-          <a href="/category/chutneys/" class:list={{ active: Astro.url.pathname.includes('/category/chutneys') }}>
-            Chutneys
-          </a>
-          <a href="/category/snacks/" class:list={{ active: Astro.url.pathname.includes('/category/snacks') }}>
-            Snacks
-          </a>
-          <a href="/category/sweets/" class:list={{ active: Astro.url.pathname.includes('/category/sweets') }}>
-            Sweets
-          </a>
-          <a href="/category/vegetarian/" class:list={{ active: Astro.url.pathname.includes('/category/vegetarian') }}>
-            <span>Vegetarian</span>
-            <ChevronDown size={14} aria-hidden="true" />
-          </a>
-          <a href="/category/non-vegetarian/" class:list={{ active: Astro.url.pathname.includes('/category/non-vegetarian') }}>
-            <span>Non-Vegetarian</span>
-            <ChevronDown size={14} aria-hidden="true" />
-          </a>
+          {menu.map((item) => (
+            <a
+              href={item.href}
+              class:list={{
+                active: item.href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(item.href),
+              }}
+            >
+              {item.href === '/' && <House size={16} aria-hidden="true" />}
+              <span>{item.label}</span>
+            </a>
+          ))}
         </nav>
       </div>
     </header>
@@ -127,7 +77,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString();
     <footer class="footer">
       <div class="container footer-inner">
         <div>
-          <span class="logo">JyoCanCook</span>
+          <span class="logo"><img class="logo-img" src="/images/logo.png" alt="" width="48" height="48" />JyoCanCook</span>
           <p class="muted">Made with love, shared with joy. Discover authentic Indian dishes.</p>
         </div>
         <div>

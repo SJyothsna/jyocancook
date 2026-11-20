@@ -22,6 +22,7 @@ function runMigration(?PDO $pdo = null): array {
         'categories_imported' => 0,
         'tags_imported' => 0,
         'menu_imported' => 0,
+        'subcategories_imported' => 0,
         'recipes_imported' => 0,
         'admin_exists' => false,
         'warnings' => [],
@@ -34,6 +35,12 @@ function runMigration(?PDO $pdo = null): array {
         $sql = file_get_contents($schemaFile);
         $pdo->exec($sql);
         $summary['schema_created'] = true;
+
+        // Databases created before sub categories existed: add the column once (CREATE TABLE IF NOT EXISTS skips them).
+        $hasSub = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'recipes' AND COLUMN_NAME = 'subcategory_slug'")->fetchColumn();
+        if ((int)$hasSub === 0) {
+            $pdo->exec("ALTER TABLE `recipes` ADD COLUMN `subcategory_slug` VARCHAR(80) NULL AFTER `category_slug`");
+        }
     } else {
         throw new RuntimeException("schema.sql not found at {$schemaFile}");
     }
@@ -47,6 +54,7 @@ function runMigration(?PDO $pdo = null): array {
     $summary['categories_imported'] = $r['created']['categories'];
     $summary['tags_imported'] = $r['created']['tags'];
     $summary['menu_imported'] = $r['created']['menu_items'];
+    $summary['subcategories_imported'] = importSubcategories($pdo, $configDir);
     $summary['recipes_imported'] = $r['created']['recipes'];
     $summary['warnings'] = $r['warnings'];
     $summary['errors'] = $r['errors'];

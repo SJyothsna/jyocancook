@@ -382,6 +382,16 @@ Then, in the admin, click **Rebuild All Static Pages** if the change affects how
 
 What an update does not touch: recipes, categories, tags and menu (MySQL); `images/recipes/` uploads and replaced photos; the generated recipe, category, tag, search and sitemap files; `backend-production/config/config.local.php`; `public_html/api/config.local.php`; `backend-production/tmp/` logs and backups; everything staging. The update package does not change database tables; a code change that needs a new column or table needs its own explicit migration step.
 
+**Sub category column (required once on an existing database, before saving any recipe with the updated code).** In phpMyAdmin, select the database and run:
+
+```sql
+ALTER TABLE `recipes` ADD COLUMN `subcategory_slug` VARCHAR(80) NULL AFTER `category_slug`;
+```
+
+A fresh database gets the column from `schema.sql`. Running it twice fails with "Duplicate column name", which is harmless.
+
+
+
 Never run `php backend-production/db/import-content.php` or `migrate.php` after go-live: with no `seed/` folder (step 12) they find nothing to import and add nothing.
 
 ## 7. Things to know

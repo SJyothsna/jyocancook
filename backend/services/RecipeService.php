@@ -120,6 +120,19 @@ class RecipeService {
         }
 
         $category = self::slugify((string)($input['category'] ?? 'curries'));
+        // Several subcategories are stored comma-separated in the existing subcategory_slug column.
+        $subInput = $input['subcategories'] ?? ($input['subcategory'] ?? []);
+        $subList = [];
+        foreach ((array)$subInput as $sub) {
+            $subSlug = self::slugify((string)$sub);
+            if ($subSlug !== '' && !in_array($subSlug, $subList, true)) {
+                $subList[] = $subSlug;
+            }
+        }
+        $subcategory = $subList ? implode(',', $subList) : null;
+        if ($subcategory !== null && strlen($subcategory) > 80) {
+            throw new InvalidArgumentException('Too many subcategories selected (limit is 80 characters in total)');
+        }
         $diet = in_array($input['diet'] ?? '', ['Vegetarian', 'Non-Vegetarian', 'Vegan', 'Eggitarian'], true)
             ? $input['diet']
             : 'Vegetarian';
@@ -150,6 +163,7 @@ class RecipeService {
                         `title` = :title,
                         `description` = :description,
                         `category_slug` = :category_slug,
+                        `subcategory_slug` = :subcategory_slug,
                         `diet` = :diet,
                         `prep_time` = :prep_time,
                         `cook_time` = :cook_time,
@@ -175,6 +189,7 @@ class RecipeService {
                     ':title' => $title,
                     ':description' => substr(trim((string)($input['description'] ?? '')), 0, 1000),
                     ':category_slug' => $category,
+                    ':subcategory_slug' => $subcategory,
                     ':diet' => $diet,
                     ':prep_time' => max(0, (int)($input['prepTime'] ?? 15)),
                     ':cook_time' => max(0, (int)($input['cookTime'] ?? 30)),
@@ -200,13 +215,13 @@ class RecipeService {
                 // Insert new
                 $insertStmt = $this->pdo->prepare("
                     INSERT INTO `recipes` (
-                        `slug`, `title`, `description`, `category_slug`, `diet`,
+                        `slug`, `title`, `description`, `category_slug`, `subcategory_slug`, `diet`,
                         `prep_time`, `cook_time`, `servings`, `difficulty`, `image`,
                         `published`, `featured`, `story`, `youtube_url`,
                         `calories`, `carbs`, `protein`, `fat`, `fiber`,
                         `tips_json`, `serve_with_json`, `published_at`
                     ) VALUES (
-                        :slug, :title, :description, :category_slug, :diet,
+                        :slug, :title, :description, :category_slug, :subcategory_slug, :diet,
                         :prep_time, :cook_time, :servings, :difficulty, :image,
                         :published, :featured, :story, :youtube_url,
                         :calories, :carbs, :protein, :fat, :fiber,
@@ -218,6 +233,7 @@ class RecipeService {
                     ':title' => $title,
                     ':description' => substr(trim((string)($input['description'] ?? '')), 0, 1000),
                     ':category_slug' => $category,
+                    ':subcategory_slug' => $subcategory,
                     ':diet' => $diet,
                     ':prep_time' => max(0, (int)($input['prepTime'] ?? 15)),
                     ':cook_time' => max(0, (int)($input['cookTime'] ?? 30)),
@@ -383,6 +399,7 @@ class RecipeService {
             'description' => $row['description'] ?? '',
             'category' => $row['category_slug'] ?? 'curries',
             'category_name' => $row['category_name'] ?? $row['category_slug'],
+            'subcategories' => array_values(array_filter(explode(',', (string)($row['subcategory_slug'] ?? '')))),
             'tags' => $tags,
             'diet' => $row['diet'] ?? 'Vegetarian',
             'prepTime' => (int)$row['prep_time'],

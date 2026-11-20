@@ -1,6 +1,6 @@
 # JyoCanCook — Hostinger Native Deployment Guide
 
-This guide walks you through hosting JyoCanCook's admin portal and static website directly on **Hostinger** (using PHP 8.1+ and MySQL), allowing you to publish recipes that generate live static HTML pages instantly without GitHub commits or Cloudflare build triggers.
+This guide walks you through hosting JyoCanCook's admin portal and static website directly on **Hostinger** (using PHP 8.1+ and MySQL), allowing you to publish recipes that generate live static HTML pages instantly without GitHub commits or build triggers.
 
 > For the staging site, follow [`HOSTINGER_STAGING.md`](HOSTINGER_STAGING.md). Packages are built with `npm run package:staging` (Node.js only).
 >
@@ -155,4 +155,4 @@ All static pages (`index.html`, `/recipes/[slug]/index.html`, `/category/[slug]/
    - The recipe is saved to MySQL.
    - The PHP static generator runs **immediately** in the background.
    - The updated HTML is placed live on the site in **under 100ms**.
-   - No GitHub commits, Cloudflare deployments, or Node builds needed!
+   - No GitHub commits, external deployments, or Node builds needed!

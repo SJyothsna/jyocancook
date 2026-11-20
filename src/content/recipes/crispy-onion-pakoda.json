@@ -3,10 +3,14 @@
   "title": "Crispy Onion Pakoda",
   "description": "Golden onion fritters, perfect for a rainy afternoon.",
   "category": "snacks",
+  "subcategories": [
+    "snacks",
+    "vegetarian"
+  ],
   "tags": [
+    "Spicy",
     "Vegetarian",
-    "Snack",
-    "Spicy"
+    "Snack"
   ],
   "diet": "Vegetarian",
   "prepTime": 15,
@@ -59,5 +63,6 @@
   "serveWith": [
     "Tea",
     "Coconut Chutney"
-  ]
+  ],
+  "publishedAt": "2026-11-19T19:11:59.340Z"
 }

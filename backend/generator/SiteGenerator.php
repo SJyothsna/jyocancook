@@ -99,6 +99,8 @@ class SiteGenerator {
             $publishedRecipes = $this->recipeService->getAllRecipes(true);
             $categories = $this->configService->getCategories();
             $tags = $this->configService->getTags();
+            $subcategories = $this->configService->getSubcategories();
+            $this->renderer->setNavMenu($this->configService->getMenu());
 
             if (!$publishedRecipes && !$categories) {
                 // An unseeded database would otherwise replace the whole site with empty pages.
@@ -112,13 +114,13 @@ class SiteGenerator {
             $sitemapUrls = [];
 
             // 1. Homepage (/)
-            $homeHtml = $this->renderer->renderHomePage($publishedRecipes);
+            $homeHtml = $this->renderer->renderHomePage($publishedRecipes, $categories, $subcategories);
             $this->writeStagedFile('index.html', $homeHtml);
             $sitemapUrls[] = ['loc' => $this->siteUrl . '/', 'changefreq' => 'daily', 'priority' => '1.0'];
             $stats['pages_generated']++;
 
             // 2. All Recipes Catalog (/recipes/)
-            $recipesCatalogHtml = $this->renderer->renderRecipesIndexPage($publishedRecipes, $categories, $tags);
+            $recipesCatalogHtml = $this->renderer->renderRecipesIndexPage($publishedRecipes, $categories, $tags, $subcategories);
             $this->writeStagedFile('recipes/index.html', $recipesCatalogHtml);
             $sitemapUrls[] = ['loc' => $this->siteUrl . '/recipes/', 'changefreq' => 'daily', 'priority' => '0.9'];
             $stats['pages_generated']++;
@@ -157,7 +159,7 @@ class SiteGenerator {
                 $cSlug = $this->assertSafeSlug((string)$cat['slug'], 'category');
                 $activeCategorySlugs[] = $cSlug;
                 $catRecipes = $this->recipeService->getRecipesByCategory($cSlug, true);
-                $catHtml = $this->renderer->renderCategoryPage($cat, $catRecipes);
+                $catHtml = $this->renderer->renderCategoryPage($cat, $catRecipes, $categories, $subcategories);
                 $this->writeStagedFile("category/{$cSlug}/index.html", $catHtml);
                 $sitemapUrls[] = ['loc' => $this->siteUrl . "/category/{$cSlug}/", 'changefreq' => 'weekly', 'priority' => '0.7'];
                 $stats['pages_generated']++;

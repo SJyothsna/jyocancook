@@ -11,6 +11,7 @@ class TemplateRenderer {
     private string $siteUrl;
     private string $siteName;
     private string $tagline;
+    private array $navLinks = [];
 
     public function __construct(?array $config = null) {
         if ($config === null) {
@@ -102,10 +103,6 @@ class TemplateRenderer {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
               <span>My Recipes</span>
             </a>
-            <a href="/admin/" rel="nofollow" class="top-link">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
-              <span>Admin</span>
-            </a>
           </div>
         </div>
       </div>
@@ -142,9 +139,49 @@ HTML;
         return $noindex ? '<meta name="robots" content="noindex,nofollow" />' : '';
     }
 
+    /**
+     * Sets the header navigation from the admin "Navigation Menu" (rows of label/href/order/visible).
+     * Hidden rows are dropped and the rest are ordered. If nothing is left, the built-in links are used.
+     */
+    public function setNavMenu(array $menu): void {
+        $visible = array_values(array_filter($menu, static fn($i) => !empty($i['visible'])));
+        usort($visible, static fn($a, $b) => (int)($a['order'] ?? 0) <=> (int)($b['order'] ?? 0));
+        $this->navLinks = array_map(
+            static fn($i) => ['href' => (string)$i['href'], 'label' => (string)$i['label']],
+            $visible
+        );
+    }
+
+    /** Subcategory slug => display name, in the configured order. Rows come from ConfigService::getSubcategories(). */
+    private function subcategoryNames(array $subcategories): array {
+        $names = [];
+        foreach ($subcategories as $s) {
+            $names[(string)$s['slug']] = (string)$s['name'];
+        }
+        return $names;
+    }
+
+    /** Category slug => the subcategory slugs that category offers (the `subcategories` list of each category). */
+    private function categorySubMap(array $categories): array {
+        $map = [];
+        foreach ($categories as $c) {
+            $map[(string)($c['slug'] ?? '')] = array_map('strval', (array)($c['subcategories'] ?? []));
+        }
+        return $map;
+    }
+
+    /** A recipe's subcategories that are defined and offered by its own category (stale or legacy values are ignored). */
+    private function recipeSubSlugs(array $recipe, array $subNames, array $catMap): array {
+        $offered = $catMap[(string)($recipe['category'] ?? '')] ?? [];
+        return array_values(array_filter(
+            array_map('strval', $recipe['subcategories'] ?? []),
+            static fn($s) => isset($subNames[$s]) && in_array($s, $offered, true)
+        ));
+    }
+
     private function renderNavLinks(string $activeNav): string {
-        $links = [
-            ['href' => '/', 'label' => 'Home', 'icon' => true],
+        $links = $this->navLinks ?: [
+            ['href' => '/', 'label' => 'Home'],
             ['href' => '/recipes/', 'label' => 'Recipes'],
             ['href' => '/category/breakfast/', 'label' => 'Breakfast'],
             ['href' => '/category/rice-biryani/', 'label' => 'Rice & Biryani'],
@@ -163,11 +200,11 @@ HTML;
             $isActive = ($href === '/' && $activeNav === '/') || ($href !== '/' && str_starts_with($activeNav, $href));
             $activeClass = $isActive ? ' class="active"' : '';
 
-            $iconSvg = !empty($link['icon'])
+            $iconSvg = $href === '/'
                 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:4px;"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
                 : '';
 
-            $html .= "<a href=\"{$href}\"{$activeClass}>{$iconSvg}<span>{$this->esc($label)}</span></a>\n";
+            $html .= "<a href=\"{$this->esc($href)}\"{$activeClass}>{$iconSvg}<span>{$this->esc($label)}</span></a>\n";
         }
 
         return $html;
@@ -204,7 +241,7 @@ HTML;
 HTML;
     }
 
-    public function renderRecipePage(array $recipe, array $allRecipes, array $categories): string {
+    public function renderRecipePage(array $recipe, array $allRecipes, array $categories, bool $preview = false): string {
         $canonicalPath = '/recipes/' . $recipe['slug'] . '/';
         $categorySlug = $recipe['category'] ?? 'curries';
         $categoryName = $recipe['category_name'] ?? ucfirst($categorySlug);
@@ -665,23 +702,61 @@ HTML;
 </script>
 HTML;
 
+        if ($preview) {
+            $status = !empty($recipe['published']) ? 'This recipe is already published.' : 'Draft: not visible to the public yet.';
+            $bodyContent = '<div style="background:#fff3cd;color:#664d03;border-bottom:1px solid #ffecb5;padding:10px 16px;text-align:center;font-weight:600;">'
+                . 'Preview only. ' . $this->esc($status) . ' Close this tab and tick Published in the admin recipe list to make it live.</div>'
+                . $bodyContent;
+        }
+
         return $this->renderLayout(
             $recipe['title'],
             $recipe['description'],
             $canonicalPath,
             $bodyContent,
-            ['head' => $jsonLd, 'image' => $recipe['image'], 'active_nav' => '/recipes/']
+            ['head' => $jsonLd, 'image' => $recipe['image'], 'active_nav' => '/recipes/', 'noindex' => $preview]
         );
     }
 
-    public function renderHomePage(array $recipes): string {
-        $featured = array_values(array_filter($recipes, fn($r) => !empty($r['featured'])));
-        $latest = array_slice(!empty($featured) && count($featured) >= 4 ? $featured : $recipes, 0, 8);
+    public function renderHomePage(array $recipes, array $categories = [], array $subcategories = []): string {
+        // Newest published first; recipes without a date keep their title order after the dated ones.
+        usort($recipes, fn($a, $b) => strcmp((string)($b['publishedAt'] ?? ''), (string)($a['publishedAt'] ?? '')));
+        $latest = array_slice($recipes, 0, 8);
 
         $cardsHtml = '';
         foreach ($latest as $r) {
             $cardsHtml .= $this->renderRecipeCard($r) . "\n";
         }
+
+        // One compact box per subcategory in use: the newest recipe's photo and the recipe count.
+        $subNames = $this->subcategoryNames($subcategories);
+        $catMap = $this->categorySubMap($categories);
+        $subcategoryBoxes = '';
+        foreach ($subNames as $slug => $name) {
+            $items = array_values(array_filter($recipes, fn($r) => in_array((string)$slug, $this->recipeSubSlugs($r, $subNames, $catMap), true)));
+            if (!$items) continue;
+            $count = count($items);
+            $label = $count === 1 ? 'recipe' : 'recipes';
+            $subcategoryBoxes .= "<a class=\"subcat-box\" href=\"/recipes/?subcategory={$this->esc((string)$slug)}\">"
+                . "<img class=\"subcat-thumb\" src=\"{$this->esc($items[0]['image'] ?? '')}\" alt=\"\" loading=\"lazy\" />"
+                . "<span class=\"subcat-text\"><span class=\"subcat-name\">{$this->esc($name)}</span>"
+                . "<span class=\"subcat-count\">{$count} {$label}</span></span></a>\n";
+        }
+        $subcategoriesHtml = $subcategoryBoxes === '' ? '' : <<<HTML
+<div class="container">
+  <section class="section subcat-section">
+    <div class="section-heading-centered">
+      <div class="section-title-flourish">
+        <h2 class="section-title">Browse by Subcategory</h2>
+      </div>
+    </div>
+    <nav class="subcat-grid" aria-label="Browse by subcategory">
+      {$subcategoryBoxes}
+    </nav>
+  </section>
+</div>
+
+HTML;
 
         $content = <<<HTML
 <div class="container">
@@ -694,17 +769,21 @@ HTML;
         <span>Explore Recipes →</span>
       </a>
     </div>
-    <div class="hero-photo-wrap">
-      <img
-        class="hero-photo"
-        src="/images/recipes/andhra-chicken-curry.png"
-        alt="Authentic Homemade Andhra Chicken Curry"
-      />
-    </div>
+    <aside class="hero-about panel panel-warm">
+      <div class="hero-about-inner">
+        <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" /></div>
+        <div class="about-text">
+          <h2>About me</h2>
+          <p>Cooking is my passion, and I believe great taste doesn't need complicated recipes. Through JyoCanCook, I share simple, authentic recipes inspired by our elders, keeping the flavours of home alive for the younger generation to enjoy and cherish.</p>
+          <p><em>Simple to cook. Rich in flavour. Rooted in tradition.</em></p>
+          <a class="link" href="/about/">Read more →</a>
+        </div>
+      </div>
+    </aside>
   </section>
 </div>
 
-<div class="container">
+{$subcategoriesHtml}<div class="container">
   <section class="section">
     <div class="section-heading-centered">
       <div class="section-title-flourish">
@@ -733,27 +812,30 @@ HTML;
         return $this->renderLayout('Authentic Homemade Indian Recipes', 'Discover authentic Indian dishes, everyday meals and family favourites at JyoCanCook.', '/', $content);
     }
 
-    public function renderRecipesIndexPage(array $recipes, array $categories, array $tags): string {
+    public function renderRecipesIndexPage(array $recipes, array $categories, array $tags, array $subcategories = []): string {
+        $subNames = $this->subcategoryNames($subcategories);
+        $catMap = $this->categorySubMap($categories);
+
         $cardsHtml = '';
+        $usedSubcategories = [];
         foreach ($recipes as $r) {
             $tLower = strtolower($r['title']);
             $ingNames = strtolower(implode(' ', array_column($r['ingredients'] ?? [], 'name')));
-            $catSlug = $r['category'] ?? '';
-            $tagStr = strtolower(implode('|', $r['tags'] ?? []));
+            $subSlugs = $this->recipeSubSlugs($r, $subNames, $catMap);
+            foreach ($subSlugs as $subSlug) {
+                $usedSubcategories[$subSlug] = $subNames[$subSlug] ?? $subSlug;
+            }
+            $subSlug = implode(',', $subSlugs);
             $card = $this->renderRecipeCard($r);
 
-            $cardsHtml .= "<div data-title=\"{$this->esc($tLower)}\" data-ingredients=\"{$this->esc($ingNames)}\" data-category=\"{$this->esc($catSlug)}\" data-tags=\"{$this->esc($tagStr)}\">{$card}</div>\n";
+            $cardsHtml .= "<div data-title=\"{$this->esc($tLower)}\" data-ingredients=\"{$this->esc($ingNames)}\" data-subcategory=\"{$this->esc($subSlug)}\">{$card}</div>\n";
         }
 
-        $catOptions = '';
-        foreach ($categories as $c) {
-            $catOptions .= "<option value=\"{$this->esc($c['slug'])}\">{$this->esc($c['name'])}</option>\n";
+        $subChips = "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-subcategory=\"\" aria-pressed=\"true\">All</button>\n";
+        foreach ($usedSubcategories as $slug => $name) {
+            $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc((string)$slug)}\" aria-pressed=\"false\">{$this->esc($name)}</button>\n";
         }
-
-        $tagOptions = '';
-        foreach ($tags as $t) {
-            $tagOptions .= "<option value=\"{$this->esc($t)}\">{$this->esc($t)}</option>\n";
-        }
+        $subChips = "<div id=\"subcategory-chips\" style=\"display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px\" role=\"group\" aria-label=\"Filter by subcategory\">\n{$subChips}</div>";
 
         $count = count($recipes);
 
@@ -761,18 +843,11 @@ HTML;
 <div class="container section">
   <span class="eyebrow">Recipe collection</span>
   <h1>Find your next favourite</h1>
-  <p class="muted">Browse our recipes or filter by category, tag and name.</p>
+  <p class="muted">Browse our recipes or filter by subcategory and name.</p>
   <div class="filterbar">
     <input id="filter-text" placeholder="Filter recipes by name or ingredient..." aria-label="Filter recipes" />
-    <select id="filter-category" aria-label="Filter by category">
-      <option value="">All categories</option>
-      {$catOptions}
-    </select>
-    <select id="filter-tag" aria-label="Filter by tag">
-      <option value="">All tags</option>
-      {$tagOptions}
-    </select>
   </div>
+  {$subChips}
   <div class="cards" id="recipe-list">
     {$cardsHtml}
   </div>
@@ -783,27 +858,23 @@ HTML;
 <script>
   (function() {
     var text = document.querySelector('#filter-text');
-    var cat = document.querySelector('#filter-category');
-    var tag = document.querySelector('#filter-tag');
+    var chips = Array.prototype.slice.call(document.querySelectorAll('#subcategory-chips .tag-chip'));
     var items = Array.prototype.slice.call(document.querySelectorAll('#recipe-list > div'));
     var countEl = document.querySelector('#recipe-count');
     var emptyEl = document.querySelector('#filter-empty');
+    var activeSub = '';
 
     function filter() {
       var q = (text ? text.value : '').toLowerCase().trim();
-      var cVal = cat ? cat.value : '';
-      var tVal = (tag ? tag.value : '').toLowerCase();
       var n = 0;
 
       items.forEach(function(el) {
         var t = el.getAttribute('data-title') || '';
         var ing = el.getAttribute('data-ingredients') || '';
-        var c = el.getAttribute('data-category') || '';
-        var tg = (el.getAttribute('data-tags') || '').split('|');
+        var s = (el.getAttribute('data-subcategory') || '').split(',');
 
         var ok = (!q || (t + ' ' + ing).indexOf(q) !== -1)
-          && (!cVal || cVal === c)
-          && (!tVal || tg.indexOf(tVal) !== -1);
+          && (!activeSub || s.indexOf(activeSub) !== -1);
 
         el.classList.toggle('hidden', !ok);
         if (ok) n++;
@@ -813,9 +884,26 @@ HTML;
       if (emptyEl) emptyEl.classList.toggle('hidden', n > 0);
     }
 
+    chips.forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        var value = chip.getAttribute('data-subcategory') || '';
+        activeSub = value !== '' && activeSub === value ? '' : value;
+        chips.forEach(function(c) {
+          var on = (c.getAttribute('data-subcategory') || '') === activeSub;
+          c.classList.toggle('tag-chip-selected', on);
+          c.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        filter();
+      });
+    });
+
     if (text) text.addEventListener('input', filter);
-    if (cat) cat.addEventListener('change', filter);
-    if (tag) tag.addEventListener('change', filter);
+
+    var initialSub = new URLSearchParams(window.location.search).get('subcategory');
+    if (initialSub) {
+      var match = chips.filter(function(c) { return c.getAttribute('data-subcategory') === initialSub; })[0];
+      if (match) match.click();
+    }
   })();
 </script>
 HTML;
@@ -823,7 +911,10 @@ HTML;
         return $this->renderLayout('All Recipes', 'Browse all authentic homemade Indian recipes at JyoCanCook.', '/recipes/', $content);
     }
 
-    public function renderCategoryPage(array $category, array $recipes): string {
+    public function renderCategoryPage(array $category, array $recipes, array $categories = [], array $subcategories = []): string {
+        $subNames = $this->subcategoryNames($subcategories);
+        $catMap = $this->categorySubMap($categories);
+
         $canonicalPath = '/category/' . $category['slug'] . '/';
         $iconHtml = !empty($category['image'])
             ? "<img src=\"{$this->esc($category['image'])}\" alt=\"\" style=\"width:20px;height:20px;object-fit:contain\" />"
@@ -831,12 +922,49 @@ HTML;
 
         $cardsHtml = '';
         foreach ($recipes as $r) {
-            $cardsHtml .= $this->renderRecipeCard($r) . "\n";
+            $sub = $this->esc(implode(',', $this->recipeSubSlugs($r, $subNames, $catMap)));
+            $cardsHtml .= "<div data-subcategory=\"{$sub}\">" . $this->renderRecipeCard($r) . "</div>\n";
         }
 
         $gridHtml = !empty($cardsHtml)
-            ? "<div class=\"cards\">{$cardsHtml}</div>"
+            ? "<div class=\"cards\" id=\"category-list\">{$cardsHtml}</div>"
             : '<div class="empty">More recipes are coming soon in this category.</div>';
+
+        // Subcategory chips: this category's own subcategories that are used by this page's recipes.
+        $subChips = '';
+        foreach ($subNames as $slug => $name) {
+            if (!in_array((string)$slug, $catMap[(string)($category['slug'] ?? '')] ?? [], true)) continue;
+            $used = array_filter($recipes, fn($r) => in_array((string)$slug, $this->recipeSubSlugs($r, $subNames, $catMap), true));
+            if (!$used) continue;
+            $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc((string)$slug)}\" aria-pressed=\"false\">{$this->esc($name)}</button>\n";
+        }
+        $subcategoryNav = $subChips === '' ? '' : "<div id=\"subcategory-chips\" style=\"display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px\" role=\"group\" aria-label=\"Filter by subcategory\">\n"
+            . "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-subcategory=\"\" aria-pressed=\"true\">All</button>\n"
+            . $subChips . "</div>\n";
+        $filterScript = $subChips === '' ? '' : <<<HTML
+<script>
+  (function() {
+    var chips = Array.prototype.slice.call(document.querySelectorAll('#subcategory-chips .tag-chip'));
+    var items = Array.prototype.slice.call(document.querySelectorAll('#category-list > div'));
+    var active = '';
+    chips.forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        var value = chip.getAttribute('data-subcategory') || '';
+        active = value !== '' && active === value ? '' : value;
+        chips.forEach(function(c) {
+          var on = (c.getAttribute('data-subcategory') || '') === active;
+          c.classList.toggle('tag-chip-selected', on);
+          c.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        items.forEach(function(el) {
+          var subs = (el.getAttribute('data-subcategory') || '').split(',');
+          el.classList.toggle('hidden', active !== '' && subs.indexOf(active) === -1);
+        });
+      });
+    });
+  })();
+</script>
+HTML;
 
         $content = <<<HTML
 <div class="container section">
@@ -846,8 +974,9 @@ HTML;
   </span>
   <h1>{$this->esc($category['name'])}</h1>
   <p class="muted">{$this->esc($category['description'])}</p>
-  {$gridHtml}
+  {$subcategoryNav}{$gridHtml}
 </div>
+{$filterScript}
 HTML;
 
         return $this->renderLayout(
@@ -994,12 +1123,15 @@ HTML;
     public function renderAboutPage(): string {
         $content = <<<HTML
 <div class="container section">
-  <span class="eyebrow">About JyoCanCook</span>
-  <h1>Homemade Recipes, Made with Love</h1>
-  <div class="panel panel-warm" style="margin-top:24px;line-height:1.7;">
-    <p>Welcome to <strong>JyoCanCook</strong> — a cozy space celebrating traditional South Indian flavours, comforting curries, everyday breakfast delights, and festive sweets.</p>
-    <p>Every recipe shared here is crafted with step-by-step instructions, practical tips, and ingredient quantities so you can recreate authentic home-cooked meals with confidence.</p>
-    <p>Happy cooking!</p>
+  <span class="eyebrow">About me</span>
+  <div class="about-layout">
+    <img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" />
+    <div class="about-text">
+      <h1>Simple cooking, unforgettable flavours.</h1>
+      <p>Cooking is my passion, and I believe that delicious food doesn't have to be complicated. My love for cooking comes from the simple, authentic recipes passed down by our elders — recipes filled with flavour, tradition, and memories.</p>
+      <p>Through JyoCanCook, I want to make these treasured recipes easy for anyone to prepare, especially the younger generation, so they can enjoy the flavours we grew up with and keep the taste of home alive for generations to come.</p>
+      <p><em>Simple to cook. Rich in flavour. Rooted in tradition.</em></p>
+    </div>
   </div>
 </div>
 HTML;

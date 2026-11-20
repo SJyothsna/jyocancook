@@ -28,6 +28,22 @@ CREATE TABLE IF NOT EXISTS `categories` (
   INDEX `idx_category_order` (`order_num`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 2b. Sub Categories Table (independent of categories; a recipe stores the slugs)
+CREATE TABLE IF NOT EXISTS `subcategories` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `slug` VARCHAR(80) NOT NULL UNIQUE,
+  `name` VARCHAR(80) NOT NULL,
+  `order_num` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2c. Which sub categories each category offers (a category can have several)
+CREATE TABLE IF NOT EXISTS `category_subcategories` (
+  `category_slug` VARCHAR(80) NOT NULL,
+  `subcategory_slug` VARCHAR(80) NOT NULL,
+  PRIMARY KEY (`category_slug`, `subcategory_slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 3. Tags Table
 CREATE TABLE IF NOT EXISTS `tags` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -54,6 +70,7 @@ CREATE TABLE IF NOT EXISTS `recipes` (
   `title` VARCHAR(140) NOT NULL,
   `description` VARCHAR(1000) NOT NULL DEFAULT '',
   `category_slug` VARCHAR(80) NOT NULL,
+  `subcategory_slug` VARCHAR(80) NULL,
   `diet` VARCHAR(40) NOT NULL DEFAULT 'Vegetarian',
   `prep_time` INT UNSIGNED NOT NULL DEFAULT 15,
   `cook_time` INT UNSIGNED NOT NULL DEFAULT 30,

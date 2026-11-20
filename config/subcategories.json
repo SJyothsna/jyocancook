@@ -1,0 +1,4 @@
+[
+  { "slug": "vegetarian", "name": "Vegetarian", "order": 1 },
+  { "slug": "non-vegetarian", "name": "Non-Vegetarian", "order": 2 }
+]

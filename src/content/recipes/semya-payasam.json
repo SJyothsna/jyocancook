@@ -3,6 +3,10 @@
   "title": "Semya Payasam",
   "description": "Creamy vermicelli dessert with cardamom and toasted nuts.",
   "category": "sweets",
+  "subcategories": [
+    "sweets",
+    "vegetarian"
+  ],
   "tags": [
     "Vegetarian",
     "Festival"
@@ -63,5 +67,6 @@
   "tips": [
     "Payasam thickens as it cools."
   ],
-  "serveWith": []
+  "serveWith": [],
+  "publishedAt": "2026-11-20T14:51:01.912Z"
 }

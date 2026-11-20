@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
-import { categories, recipes, type Category } from '../../lib/data';
+import { categories, recipes, subcategories as allSubcategories, type Category } from '../../lib/data';
 
 export function getStaticPaths() {
   return categories.map((category) => ({ params: { slug: category.slug }, props: { category } }));
@@ -14,6 +14,11 @@ const list = recipes.filter(
     (category.slug === 'vegetarian' && x.diet === 'Vegetarian') ||
     (category.slug === 'non-vegetarian' && x.diet === 'Non-Vegetarian'),
 );
+
+// Subcategory chips: this category's own subcategories that are used by this page's recipes.
+const subcategories = allSubcategories.filter(
+  (s) => category.subcategories?.includes(s.slug) && list.some((r) => r.subcategories?.includes(s.slug)),
+);
 ---
 <Base title={category.name} description={category.description}>
   <div class="container section">
@@ -23,10 +28,38 @@ const list = recipes.filter(
     </span>
     <h1>{category.name}</h1>
     <p class="muted">{category.description}</p>
+    {subcategories.length > 0 && (
+      <div id="subcategory-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px" role="group" aria-label="Filter by subcategory">
+        <button type="button" class="tag-chip tag-chip-selected" data-subcategory="" aria-pressed="true">All</button>
+        {subcategories.map((s) => (
+          <button type="button" class="tag-chip" data-subcategory={s.slug} aria-pressed="false">{s.name}</button>
+        ))}
+      </div>
+    )}
     {list.length ? (
-      <div class="cards">{list.map((r) => <RecipeCard recipe={r} />)}</div>
+      <div class="cards" id="category-list">
+        {list.map((r) => <div data-subcategory={(r.subcategories ?? []).join(',')}><RecipeCard recipe={r} /></div>)}
+      </div>
     ) : (
       <div class="empty">More recipes are coming soon in this category.</div>
     )}
   </div>
 </Base>
+
+<script>
+  const chips = [...document.querySelectorAll<HTMLButtonElement>('#subcategory-chips .tag-chip')];
+  const items = [...document.querySelectorAll<HTMLElement>('#category-list > div')];
+  let active = '';
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => {
+      const value = chip.dataset.subcategory ?? '';
+      active = value !== '' && active === value ? '' : value;
+      chips.forEach((c) => {
+        const on = (c.dataset.subcategory ?? '') === active;
+        c.classList.toggle('tag-chip-selected', on);
+        c.setAttribute('aria-pressed', String(on));
+      });
+      items.forEach((el) => el.classList.toggle('hidden', active !== '' && !(el.dataset.subcategory ?? '').split(',').includes(active)));
+    }),
+  );
+</script>

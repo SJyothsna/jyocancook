@@ -70,16 +70,22 @@ async function load() {
   notice('Loading ' + tab + '...');
   try {
     if (tab === 'recipes') {
-      const [recipesRes, categoriesRes, tagsRes] = await Promise.all([
+      const [recipesRes, categoriesRes, tagsRes, subcategoriesRes] = await Promise.all([
         api('recipes'),
         cache.categories ? Promise.resolve(cache.categories) : api('categories').catch(() => ({ data: [] })),
         cache.tags ? Promise.resolve(cache.tags) : api('tags').catch(() => ({ data: [] })),
+        cache.subcategories ? Promise.resolve(cache.subcategories) : api('subcategories').catch(() => ({ data: [] })),
       ]);
       cache.recipes = recipesRes.data;
       cache.categories = categoriesRes;
       cache.tags = tagsRes;
+      cache.subcategories = subcategoriesRes;
     } else {
       cache[tab] = await api(tab);
+      if (tab === 'categories') {
+        // The categories tab maps sub categories to each category.
+        cache.subcategories = await api('subcategories').catch(() => ({ data: [] }));
+      }
     }
     render();
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -107,6 +113,23 @@ function render() {
   renderConfig();
 }
 
+// Category dropdown for a row in the recipe list.
+function listSelect(field: 'category', r: any) {
+  const value = r[field] || '';
+  const options: { slug: string; name: string }[] = [...(cache.categories?.data || [])];
+  if (value && !options.some((c) => c.slug === value)) options.push({ slug: value, name: value });
+  return `<select data-field="${field}" data-slug="${esc(r.slug)}" aria-label="Category: ${esc(
+    r.title,
+  )}" style="min-width:140px;padding:6px 8px;font-size:var(--fs-sm);">${options
+    .map((c) => `<option value="${esc(c.slug)}" ${c.slug === value ? 'selected' : ''}>${esc(c.name)}</option>`)
+    .join('')}</select>`;
+}
+
+// Draft preview: opens the saved recipe page (admin-only, not public) in a new tab.
+function previewLink(slug: string, label = 'Preview') {
+  return `<a class="btn btn-outline" href="/api/admin/preview/${encodeURIComponent(slug)}" target="_blank" rel="noopener" style="padding:4px 10px;font-size:var(--fs-xs);">${label}</a>`;
+}
+
 function renderRecipes() {
   const recipes = cache.recipes || [];
   const current = editing ? recipes.find((r: any) => r.slug === editing) : undefined;
@@ -116,16 +139,60 @@ function renderRecipes() {
   )}</div>${
     current || editing === '__new__'
       ? recipeForm(current)
-      : `<table class="admin-table"><thead><tr><th>Recipe</th><th>Category</th><th>Status</th><th></th></tr></thead><tbody>${recipes
+      : `<table class="admin-table"><thead><tr><th>Recipe</th><th>Category</th><th>Published</th><th>Featured</th><th></th></tr></thead><tbody>${recipes
           .map(
             (r: any) =>
-              `<tr><td>${esc(r.title)}</td><td>${esc(r.category)}</td><td>${
-                r.published ? 'Published' : 'Draft'
-              }</td><td><button type="button" data-edit="${esc(r.slug)}">Edit</button></td></tr>`,
+              `<tr><td>${esc(r.title)}</td><td>${listSelect('category', r)}</td>${['published', 'featured']
+                .map(
+                  (f) =>
+                    `<td><input type="checkbox" data-field="${f}" data-slug="${esc(r.slug)}" aria-label="${
+                      f === 'published' ? 'Published' : 'Featured'
+                    }: ${esc(r.title)}" ${r[f] ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;"/></td>`,
+                )
+                .join('')}<td><button type="button" data-edit="${esc(r.slug)}">Edit</button>${
+                  r.published ? '' : ` ${previewLink(r.slug)}`
+                }</td></tr>`,
           )
           .join('')}</tbody></table>`
   }`;
   wireActions();
+  // Category, Published and Featured save straight from the list.
+  content.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-field]').forEach((control) => {
+    control.onchange = async () => {
+      const recipe = (cache.recipes || []).find((x: any) => x.slug === control.dataset.slug);
+      const field = control.dataset.field!;
+      if (!recipe) return;
+      const isCheckbox = control instanceof HTMLInputElement;
+      const value = isCheckbox ? control.checked : control.value;
+      const previous = isCheckbox ? !!recipe[field] : recipe[field] || '';
+      control.disabled = true;
+      try {
+        notice('Saving...');
+        await api('recipes/' + recipe.slug, 'POST', { recipe: { ...recipe, [field]: value } });
+        recipe[field] = value;
+        const label = isCheckbox ? '' : control.selectedOptions[0]?.textContent || '';
+        notice(
+          `${recipe.title}: ${
+            field === 'published'
+              ? value
+                ? 'published'
+                : 'moved to drafts'
+              : field === 'featured'
+                ? value
+                  ? 'featured'
+                  : 'no longer featured'
+                : `category set to ${label}`
+          }.`,
+        );
+      } catch (e) {
+        if (isCheckbox) control.checked = !!previous;
+        else control.value = String(previous);
+        notice(String(e), true);
+      } finally {
+        control.disabled = false;
+      }
+    };
+  });
   content.querySelectorAll<HTMLElement>('[data-edit]').forEach(
     (x) =>
       (x.onclick = () => {
@@ -214,6 +281,27 @@ function groupIngredientsBySection(ingredients: any[] = []) {
   return sections.length ? sections : [{ title: '', items: [{ name: '', amount: null, unit: '' }] }];
 }
 
+// Chips for the sub categories offered by the selected category.
+function subcategoryChipsHtml(categorySlug: string, selected: Set<string>) {
+  if (!categorySlug) {
+    return '<span class="field-note">Choose a category first to see its sub categories.</span>';
+  }
+  const category = (cache.categories?.data || []).find((c: any) => c.slug === categorySlug);
+  const offered = new Set<string>(Array.isArray(category?.subcategories) ? category.subcategories : []);
+  const subs: { slug: string; name: string }[] = (cache.subcategories?.data || []).filter((s: any) =>
+    offered.has(s.slug),
+  );
+  if (!subs.length) {
+    return '<span class="field-note">This category has no sub categories yet. Configure them on the Categories tab.</span>';
+  }
+  return subs
+    .map((s) => {
+      const on = selected.has(s.slug);
+      return `<button type="button" class="tag-chip ${on ? 'tag-chip-selected' : ''}" data-subcategory="${esc(s.slug)}" data-label="${esc(s.name)}" aria-pressed="${on}">${on ? '✓ ' : '+ '}${esc(s.name)}</button>`;
+    })
+    .join('');
+}
+
 function recipeForm(r: any) {
   const categories = cache.categories?.data || [];
   const categoryOptions = categories.length ? categories : [];
@@ -226,10 +314,16 @@ function recipeForm(r: any) {
     }
   });
   const selectedTagSet = new Set(recipeTags.map((t: string) => String(t).toLowerCase()));
+  const selectedSubcategories = new Set<string>(
+    Array.isArray(r?.subcategories) ? r.subcategories : r?.subcategory ? [r.subcategory] : [],
+  );
   const ingredientSections = groupIngredientsBySection(r?.ingredients);
   const stepsList = r?.steps && r.steps.length ? r.steps : [{ title: '', text: '' }];
 
   return `<form class="admin-form" id="recipe-form">
+    <div class="admin-sticky-actions">
+      <button class="btn" type="submit">${r ? 'Save changes' : 'Create recipe'}</button>
+    </div>
     <label>Recipe title<input name="title" id="recipe-title" required maxlength="140" value="${esc(r?.title)}" placeholder="e.g. Andhra Chicken Curry"/></label>
     <label>Slug (URL, auto-generated from title)<input name="slug" id="recipe-slug" ${
       r ? 'readonly' : ''
@@ -242,6 +336,14 @@ function recipeForm(r: any) {
           `<option value="${esc(c.slug)}" ${r?.category === c.slug ? 'selected' : ''}>${esc(c.name)}</option>`,
       )
       .join('')}</select></label>
+
+    <div style="margin-top:12px;margin-bottom:12px;">
+      <label style="font-weight:600;margin-bottom:6px;display:block">Sub categories (select all that apply)</label>
+      <div id="recipe-subcategory-chips" style="display:flex;flex-wrap:wrap;gap:8px;">${subcategoryChipsHtml(
+        r?.category || '',
+        selectedSubcategories,
+      )}</div>
+    </div>
 
     <div style="margin-top:12px;margin-bottom:12px;">
       <label style="font-weight:600;margin-bottom:6px;display:block">Tags (select from list or add new)</label>
@@ -320,23 +422,11 @@ function recipeForm(r: any) {
     <label style="margin-top:12px">Cooking tips (one per line)<textarea name="tips" rows="3" placeholder="e.g. Adjust spice to taste.">${esc(r?.tips?.join('\n'))}</textarea></label>
     <label>Serve with (comma-separated)<input name="serveWith" placeholder="e.g. Steamed Rice, Roti, Sambar" value="${esc(r?.serveWith?.join(', '))}"/></label>
     <label>YouTube URL (optional)<input name="youtubeUrl" type="url" placeholder="https://youtube.com/watch?v=..." value="${esc(r?.youtubeUrl)}"/></label>
-    <div style="margin-top:16px;background:var(--cream);border:1px solid var(--line);border-radius:var(--radius-card);padding:14px 16px;">
-      <div class="admin-builder-title" style="margin-bottom:8px">Publishing Status</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;">
-          <input type="checkbox" name="published" ${r?.published !== false ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--primary);"/>
-          <span>Publish recipe (Live on site)</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-          <input type="checkbox" name="featured" ${r?.featured ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--primary);"/>
-          <span>Feature on homepage</span>
-        </label>
-      </div>
-      <div class="field-note" style="margin-top:6px;">Uncheck "Publish recipe" only if you want to keep this recipe as an unpublished draft.</div>
-    </div>
+    <div class="field-note" style="margin-top:12px;">New recipes are saved as drafts. Tick Published on the recipe list to make one live. Use the Featured checkbox there to feature it.</div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
       <button class="btn" type="submit">${r ? 'Save changes' : 'Create recipe'}</button>
+      ${r && !r.published ? previewLink(r.slug, 'Preview draft (last saved version)') : ''}
       ${r ? '<button class="btn btn-outline" type="button" id="delete-recipe">Delete recipe</button>' : ''}
     </div>
   </form>`;
@@ -349,7 +439,7 @@ function lines(s: string) {
     .filter(Boolean);
 }
 
-function formData(f: HTMLFormElement) {
+function formData(f: HTMLFormElement, existing?: any) {
   const d = new FormData(f);
   const text = (k: string) => String(d.get(k) || '').trim();
 
@@ -410,7 +500,10 @@ function formData(f: HTMLFormElement) {
     slug: text('slug'),
     description: text('description'),
     category: text('category'),
-    tags: Array.from(f.querySelectorAll<HTMLElement>('.tag-chip.tag-chip-selected'))
+    subcategories: Array.from(f.querySelectorAll<HTMLElement>('#recipe-subcategory-chips .tag-chip-selected'))
+      .map((chip) => chip.getAttribute('data-subcategory') || '')
+      .filter(Boolean),
+    tags: Array.from(f.querySelectorAll<HTMLElement>('#recipe-tag-chips .tag-chip-selected'))
       .map((chip) => chip.getAttribute('data-tag')?.trim() || '')
       .filter(Boolean),
     story: text('story') || undefined,
@@ -420,8 +513,9 @@ function formData(f: HTMLFormElement) {
     servings: Number(text('servings')),
     difficulty: text('difficulty'),
     image: text('image'),
-    published: d.has('published'),
-    featured: d.has('featured'),
+    // Published/Featured are changed from the recipe list; keep the current values when editing.
+    published: existing ? !!existing.published : false,
+    featured: existing ? !!existing.featured : false,
     ingredients,
     steps,
     ...(nutrition ? { nutrition } : {}),
@@ -455,6 +549,27 @@ function wireRecipeForm(r: any) {
       }
     });
   }
+
+  // Multi-select Sub category chips interaction
+  const subcategoryChips = el('recipe-subcategory-chips');
+  subcategoryChips.addEventListener('click', (e) => {
+    const chip = (e.target as HTMLElement).closest<HTMLButtonElement>('.tag-chip');
+    if (!chip) return;
+    const on = !chip.classList.contains('tag-chip-selected');
+    chip.classList.toggle('tag-chip-selected', on);
+    chip.setAttribute('aria-pressed', String(on));
+    chip.textContent = (on ? '✓ ' : '+ ') + (chip.getAttribute('data-label') || '');
+  });
+  // Changing the category swaps the chips to that category's sub categories.
+  const categorySelect = el('recipe-category') as HTMLSelectElement;
+  categorySelect.addEventListener('change', () => {
+    const selected = new Set(
+      Array.from(subcategoryChips.querySelectorAll<HTMLElement>('.tag-chip-selected')).map(
+        (chip) => chip.getAttribute('data-subcategory') || '',
+      ),
+    );
+    subcategoryChips.innerHTML = subcategoryChipsHtml(categorySelect.value, selected);
+  });
 
   // Multi-select Tag Chips interaction
   const tagChipsContainer = el('recipe-tag-chips');
@@ -656,7 +771,7 @@ function wireRecipeForm(r: any) {
 
   form.onsubmit = async (e) => {
     e.preventDefault();
-    const value = formData(form);
+    const value = formData(form, r);
     if (!value.category) {
       notice('Choose a category first.', true);
       return;
@@ -755,16 +870,21 @@ function renderConfig() {
   const isTags = tab === 'tags';
   const columns =
     tab === 'categories'
-      ? ['name', 'slug', 'description', 'image', 'order']
-      : tab === 'menu'
-        ? ['label', 'href', 'order', 'visible']
-        : ['tag'];
-  content.innerHTML = `<h2>Manage ${esc(tab)}</h2><p class="field-note">${
+      ? ['name', 'slug', 'description', 'image', 'order', 'subcategories']
+      : tab === 'subcategories'
+        ? ['name', 'slug', 'order']
+        : tab === 'menu'
+          ? ['label', 'href', 'order', 'visible']
+          : ['tag'];
+  const tabLabel = tab === 'subcategories' ? 'sub categories' : tab;
+  content.innerHTML = `<h2>Manage ${esc(tabLabel)}</h2><p class="field-note">${
     tab === 'categories'
-      ? 'Category image/icon path or upload. Slugs become URLs (e.g. /category/breakfast/).'
-      : tab === 'menu'
-        ? 'Menu href values must start with /, for example /category/curries/.'
-        : 'Enter one tag per line.'
+      ? 'Category image/icon path or upload. Slugs become URLs (e.g. /category/breakfast/). Tick the sub categories each category offers; recipes in that category choose from them.'
+      : tab === 'subcategories'
+        ? 'Create the shared list of sub categories here, then map them to categories on the Categories tab. Leave the slug empty to create it from the name.'
+        : tab === 'menu'
+          ? 'Menu href values must start with /, for example /category/curries/.'
+          : 'Enter one tag per line.'
   }</p><form id="config-form" class="admin-form">${
     isTags
       ? `<label>Tags (one per line)<textarea name="tags" rows="12">${esc(list.join('\n'))}</textarea></label>`
@@ -773,7 +893,7 @@ function renderConfig() {
           .join('')}<th></th></tr></thead><tbody id="config-rows">${list
           .map((row: any) => configRow(row, columns))
           .join('')}</tbody></table><div>${actionButton('Add row', 'add-row')}</div>`
-  }<button type="submit" class="btn">Save ${esc(tab)}</button></form>`;
+  }<button type="submit" class="btn">Save ${esc(tabLabel)}</button></form>`;
   content.querySelectorAll('[data-action="add-row"]').forEach((b) =>
     b.addEventListener('click', () => {
       el('config-rows').insertAdjacentHTML('beforeend', configRow({}, columns));
@@ -790,10 +910,20 @@ function renderConfig() {
       ? lines((form.elements.namedItem('tags') as HTMLTextAreaElement).value)
       : [...form.querySelectorAll<HTMLTableRowElement>('#config-rows tr')].map((tr) => {
           const o: Item = {};
-          tr.querySelectorAll<HTMLInputElement>('input[data-key]').forEach((field) => {
+          tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input[data-key], select[data-key]').forEach((field) => {
             const k = field.dataset.key!;
-            o[k] = field.type === 'checkbox' ? field.checked : field.type === 'number' ? Number(field.value) : field.value.trim();
+            o[k] =
+              field instanceof HTMLInputElement && field.type === 'checkbox'
+                ? field.checked
+                : field.type === 'number'
+                  ? Number(field.value)
+                  : field.value.trim();
           });
+          if (tr.querySelector('.cat-subs')) {
+            o.subcategories = [...tr.querySelectorAll<HTMLInputElement>('.cat-subs input:checked')].map(
+              (i) => i.dataset.sub || '',
+            );
+          }
           return o;
         });
     try {
@@ -815,6 +945,20 @@ function configRow(row: Item, columns: string[]) {
       }
       if (k === 'order') {
         return `<td><input data-key="order" type="number" value="${esc(row[k] ?? 0)}" aria-label="order" style="max-width:80px" /></td>`;
+      }
+      if (k === 'subcategories') {
+        const chosen: string[] = Array.isArray(row.subcategories) ? row.subcategories : [];
+        const subs: { slug: string; name: string }[] = cache.subcategories?.data || [];
+        return `<td><div class="cat-subs" style="display:flex;flex-direction:row;flex-wrap:wrap;gap:4px 14px;min-width:260px">${
+          subs.length
+            ? subs
+                .map(
+                  (s) =>
+                    `<label style="display:inline-flex;flex-direction:row;align-items:center;gap:6px;margin:0;white-space:nowrap;font-weight:400"><input type="checkbox" data-sub="${esc(s.slug)}" ${chosen.includes(s.slug) ? 'checked' : ''}/> ${esc(s.name)}</label>`,
+                )
+                .join('')
+            : '<span class="field-note">Create sub categories first.</span>'
+        }</div></td>`;
       }
       if (k === 'image') {
         return `<td><div style="display:flex;align-items:center;gap:6px">

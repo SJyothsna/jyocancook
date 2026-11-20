@@ -1,0 +1,39 @@
+{
+  "slug": "chicken-biryani",
+  "title": "Chicken Biryani",
+  "description": "jljhj",
+  "category": "rice-biryani",
+  "subcategories": [
+    "rice-biryani",
+    "non-vegetarian"
+  ],
+  "tags": [
+    "Chicken"
+  ],
+  "diet": "Non-Vegetarian",
+  "prepTime": 15,
+  "cookTime": 30,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/andhra-chicken-curry.png",
+  "published": true,
+  "featured": false,
+  "story": "jjjjkklhjgjkbkjh",
+  "ingredients": [
+    {
+      "amount": 1,
+      "unit": "",
+      "name": "www1",
+      "section": "12"
+    }
+  ],
+  "steps": [
+    {
+      "title": "qww",
+      "text": "addedas"
+    }
+  ],
+  "tips": [],
+  "serveWith": [],
+  "publishedAt": "2026-11-20T15:15:12.088Z"
+}

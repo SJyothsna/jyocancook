@@ -3,6 +3,10 @@
   "title": "Coconut Chutney",
   "description": "A fresh South Indian coconut chutney with a fragrant tempering.",
   "category": "chutneys",
+  "subcategories": [
+    "chutneys",
+    "vegetarian"
+  ],
   "tags": [
     "Vegetarian",
     "Quick",
@@ -61,5 +65,6 @@
   "serveWith": [
     "Dosa",
     "Idli"
-  ]
+  ],
+  "publishedAt": "2026-11-19T19:04:24.583Z"
 }
