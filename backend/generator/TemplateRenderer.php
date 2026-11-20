@@ -23,6 +23,20 @@ class TemplateRenderer {
         $this->tagline = $config['tagline'] ?? 'Homemade Recipes';
     }
 
+    /** 0.5 -> "1/2", 1.5 -> "1 1/2", 2 -> "2". Same rules as src/lib/fractions.ts. */
+    public static function formatQty(?float $n): string {
+        if ($n === null) return '';
+        $whole = (int)floor($n);
+        $frac = $n - $whole;
+        if ($frac < 0.02) return (string)$whole;
+        if ($frac > 0.98) return (string)($whole + 1);
+        $fractions = [[1 / 8, "\u{215B}"], [1 / 4, "\u{00BC}"], [1 / 3, "\u{2153}"], [3 / 8, "\u{215C}"], [1 / 2, "\u{00BD}"], [5 / 8, "\u{215D}"], [2 / 3, "\u{2154}"], [3 / 4, "\u{00BE}"], [7 / 8, "\u{215E}"]];
+        foreach ($fractions as [$v, $label]) {
+            if (abs($frac - $v) < 0.02) return ($whole ? $whole . ' ' : '') . $label;
+        }
+        return rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.');
+    }
+
     public static function esc(?string $v): string {
         return htmlspecialchars((string)($v ?? ''), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
     }
@@ -422,11 +436,12 @@ HTML;
             $itemsHtml = '';
             foreach ($sec['items'] as $i) {
                 $unitPart = !empty($i['unit']) ? ' ' . $this->esc($i['unit']) : '';
+                $qtyText = self::formatQty(isset($i['amount']) && $i['amount'] !== '' ? (float)$i['amount'] : null);
                 $itemsHtml .= <<<HTML
 <label class="ingredient">
   <input type="checkbox" />
   <span>
-    <span class="qty" data-amount="{$this->esc((string)($i['amount'] ?? ''))}">{$this->esc((string)($i['amount'] ?? ''))}</span>{$unitPart} {$this->esc($i['name'])}
+    <span class="qty" data-amount="{$this->esc((string)($i['amount'] ?? ''))}">{$qtyText}</span>{$unitPart} {$this->esc($i['name'])}
   </span>
 </label>
 HTML;
@@ -621,9 +636,12 @@ HTML;
         <div class="ingredients-head">
           <h2>Ingredients</h2>
           <div class="serving-controls">
-            Servings: <button id="minus" aria-label="Reduce servings">−</button>
-            <strong id="servings">{$this->esc((string)($recipe['servings'] ?? 4))}</strong>
-            <button id="plus" aria-label="Increase servings">+</button>
+            Servings: <strong id="servings">{$this->esc((string)($recipe['servings'] ?? 4))}</strong>
+            <div class="scale-group" role="group" aria-label="Scale recipe">
+              <button type="button" class="scale-btn" data-scale="0.5" aria-pressed="false">0.5x</button>
+              <button type="button" class="scale-btn active" data-scale="1" aria-pressed="true">1x</button>
+              <button type="button" class="scale-btn" data-scale="2" aria-pressed="false">2x</button>
+            </div>
           </div>
         </div>
         <div id="ingredients">
@@ -650,25 +668,36 @@ HTML;
   (function() {
     var base = {$recipe['servings']};
     var slug = '{$this->esc($recipe['slug'])}';
-    var count = base;
     var output = document.querySelector('#servings');
-    function update(delta) {
-      count = Math.min(50, Math.max(1, count + delta));
-      if (output) output.textContent = count;
+    function formatQty(n) {
+      var whole = Math.floor(n), frac = n - whole;
+      if (frac < 0.02) return String(whole);
+      if (frac > 0.98) return String(whole + 1);
+      var f = [[1/8, '\u215B'], [1/4, '\u00BC'], [1/3, '\u2153'], [3/8, '\u215C'], [1/2, '\u00BD'], [5/8, '\u215D'], [2/3, '\u2154'], [3/4, '\u00BE'], [7/8, '\u215E']];
+      for (var k = 0; k < f.length; k++) {
+        if (Math.abs(frac - f[k][0]) < 0.02) return (whole ? whole + ' ' : '') + f[k][1];
+      }
+      return String(Number(n.toFixed(2)));
+    }
+    function setScale(scale) {
+      if (output) output.textContent = formatQty(base * scale);
       document.querySelectorAll('.qty').forEach(function(el) {
         var raw = el.getAttribute('data-amount');
         if (!raw || isNaN(Number(raw))) {
           el.textContent = '';
           return;
         }
-        var amount = Number(raw);
-        el.textContent = String(Number(((amount * count) / base).toFixed(2)));
+        el.textContent = formatQty(Number(raw) * scale);
+      });
+      document.querySelectorAll('.scale-btn').forEach(function(btn) {
+        var on = Number(btn.getAttribute('data-scale')) === scale;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', String(on));
       });
     }
-    var minusBtn = document.querySelector('#minus');
-    var plusBtn = document.querySelector('#plus');
-    if (minusBtn) minusBtn.onclick = function() { update(-1); };
-    if (plusBtn) plusBtn.onclick = function() { update(1); };
+    document.querySelectorAll('.scale-btn').forEach(function(btn) {
+      btn.onclick = function() { setScale(Number(btn.getAttribute('data-scale'))); };
+    });
 
     var saved = JSON.parse(localStorage.getItem('jyo-saved') || '[]');
     var saveBtn = document.querySelector('#save');

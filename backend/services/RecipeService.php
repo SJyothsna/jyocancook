@@ -225,7 +225,7 @@ class RecipeService {
                         :prep_time, :cook_time, :servings, :difficulty, :image,
                         :published, :featured, :story, :youtube_url,
                         :calories, :carbs, :protein, :fat, :fiber,
-                        :tips_json, :serve_with_json, IF(:publish_now = 1, NOW(), NULL)
+                        :tips_json, :serve_with_json, IF(:publish_now = 1, COALESCE(:published_at_in, NOW()), NULL)
                     )
                 ");
                 $insertStmt->execute([
@@ -252,6 +252,8 @@ class RecipeService {
                     ':fiber' => $fiber,
                     ':tips_json' => !empty($tips) ? json_encode($tips, JSON_UNESCAPED_UNICODE) : null,
                     ':serve_with_json' => !empty($serveWith) ? json_encode($serveWith, JSON_UNESCAPED_UNICODE) : null,
+                    // Keeps the original publish date of recipes imported from the repository (empty = now).
+                    ':published_at_in' => ($ts = strtotime((string)($input['publishedAt'] ?? ''))) !== false ? gmdate('Y-m-d H:i:s', $ts) : null,
                 ]);
                 $recipeId = (int)$this->pdo->lastInsertId();
             }

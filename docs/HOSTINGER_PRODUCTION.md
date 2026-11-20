@@ -63,7 +63,7 @@ ACCOUNT/
 
    It overwrites `dist/` (the staging build there is replaced by the production build). `deploy/staging/` is not touched.
 
-3. Seed content: `backend.zip` ships the content committed on this branch in `backend-production/seed/` (**7 recipes, 8 categories, 14 tags, 8 menu items, 40 ingredients, 23 steps**, plus the recipe images in `public_html.zip`). It is read from git `HEAD`, not from your working tree and not from `main`.
+3. Seed content: `backend.zip` ships the content committed on this branch in `backend-production/seed/` (**8 recipes, 8 categories, 14 tags, 11 menu items, 41 ingredients, 24 steps**, plus the recipe images in `public_html.zip`). It is read from git `HEAD`, not from your working tree and not from `main`.
 4. Create the session secret on your laptop (needed in step 4). It must differ from staging's:
 
    ```powershell
@@ -225,7 +225,7 @@ Expected: environment `production`, hosts `jyocancook.com, www.jyocancook.com`, 
 php backend-production/db/import-content.php --dry-run
 ```
 
-Expected: "DRY RUN (nothing written)" and a table showing the seed counts and "would add" 7 recipes, 8 categories, 14 tags, 8 menu items. Warnings about missing images are listed; images are in `public_html/images/`.
+Expected: "DRY RUN (nothing written)" and a table showing the seed counts and "would add" 8 recipes, 8 categories, 14 tags, 11 menu items. Warnings about missing images are listed; images are in `public_html/images/`.
 
 ### Step 8 — Run the real import (once)
 
@@ -259,12 +259,12 @@ UNION ALL SELECT 'admins', COUNT(*) FROM admins;"
 
 | what | expected |
 |---|---|
-| recipes | 7 |
+| recipes | 8 |
 | categories | 8 |
 | tags | 14 |
-| menu_items | 8 |
-| recipe_ingredients | 40 |
-| recipe_steps | 23 |
+| menu_items | 11 |
+| recipe_ingredients | 41 |
+| recipe_steps | 24 |
 | admins | 1 |
 
 (`import-content.php` also prints `<table> in database: N` lines.) If the numbers differ, stop and do not publish.

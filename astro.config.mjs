@@ -4,9 +4,40 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { sanitizeRecipe, sanitizeConfig } from './src/lib/admin-sanitize.ts';
 
+const escHtml = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+// Minimal draft preview used only by the local dev server (production uses api/index.php).
+function renderDevPreview(r) {
+  const ings = (r.ingredients || [])
+    .map((i) => `<li>${escHtml([i.amount ?? '', i.unit, i.name].filter((x) => x !== '').join(' '))}</li>`)
+    .join('');
+  const steps = (r.steps || [])
+    .map((s) => `<li><strong>${escHtml(s.title)}</strong><br>${escHtml(s.text)}</li>`)
+    .join('');
+  const tips = (r.tips || []).map((t) => `<li>${escHtml(t)}</li>`).join('');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Preview: ${escHtml(r.title)}</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#2b1d1a}
+.banner{background:#fff3cd;border:1px solid #e6c85c;padding:.5rem .75rem;border-radius:6px;margin-bottom:1rem}
+img{max-width:100%;border-radius:8px}</style></head><body>
+<div class="banner">Draft preview (last saved version)${r.published ? '' : ' - not published'}</div>
+<h1>${escHtml(r.title)}</h1><p>${escHtml(r.description)}</p>
+${r.image ? `<img src="${escHtml(r.image)}" alt="">` : ''}
+<p>Prep ${escHtml(r.prepTime)} min | Cook ${escHtml(r.cookTime)} min | Serves ${escHtml(r.servings)} | ${escHtml(r.difficulty)}</p>
+<h2>Ingredients</h2><ul>${ings}</ul><h2>Steps</h2><ol>${steps}</ol>
+${tips ? `<h2>Tips</h2><ul>${tips}</ul>` : ''}</body></html>`;
+}
+
 function adminDevPlugin() {
   return {
     name: 'admin-dev-api',
+    // Saving writes JSON that data.ts imports; without this Vite does a full page reload,
+    // which restarts the admin SPA ("Checking administrator access...").
+    handleHotUpdate({ file }) {
+      const f = file.replace(/\\/g, '/');
+      if (f.includes('/config/') || f.includes('/src/content/recipes/')) return [];
+    },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
@@ -41,6 +72,20 @@ function adminDevPlugin() {
         const type = segments[0];
 
         try {
+          if (type === 'preview' && segments.length === 2 && req.method === 'GET') {
+            const slug = decodeURIComponent(segments[1]).replace(/[^a-z0-9-]/gi, '');
+            try {
+              const recipe = JSON.parse(
+                await fs.readFile(path.join(process.cwd(), 'src/content/recipes', `${slug}.json`), 'utf-8')
+              );
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'text/html;charset=utf-8');
+              return res.end(renderDevPreview(recipe));
+            } catch {
+              return sendJson({ error: 'Recipe not found' }, 404);
+            }
+          }
+
           if (type === 'status' && req.method === 'GET') {
             return sendJson({
               ok: true,

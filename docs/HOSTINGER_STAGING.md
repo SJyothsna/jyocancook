@@ -142,7 +142,7 @@ php backend-staging/db/create-admin.php     # asks for username, email and a hid
 
 ### Import the existing recipes, categories and tags
 
-`backend.zip` ships the content committed on the branch it was built from (`feature/hostinger-static-publishing`, read from git `HEAD`) in `backend-staging/seed/` (7 recipes, 8 categories, 14 tags, 8 menu items). `migrate.php` imports it; to import (or re-import) on its own:
+`backend.zip` ships the content committed on the branch it was built from (`feature/hostinger-static-publishing`, read from git `HEAD`) in `backend-staging/seed/` (8 recipes, 8 categories, 14 tags, 11 menu items). `migrate.php` imports it; to import (or re-import) on its own:
 
 ```bash
 cd HOSTINGER_ACCOUNT_ROOT

@@ -93,10 +93,10 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
   after(stopPhp);
 
   it('the branch holds the content the import is expected to carry over', () => {
-    assert.equal(recipes.length, 7, 'recipes in branch');
+    assert.equal(recipes.length, 8, 'recipes in branch');
     assert.equal(categories.length, 8, 'categories in branch');
     assert.equal(uniqueTags.size, 14, 'unique tags in branch (tags.json plus every tag a recipe uses)');
-    assert.equal(menu.length, 8, 'menu items in branch');
+    assert.equal(menu.length, 11, 'menu items in branch');
   });
 
   it('every image referenced by the branch content exists in the branch (nothing is missing)', () => {
@@ -111,7 +111,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
   it('a dry run reports what would be added and writes nothing', async () => {
     const r = await runImport("['dry_run' => true]");
     assert.deepEqual(r.errors, []);
-    assert.deepEqual(r.created, { categories: 8, tags: 14, recipes: 7, menu_items: 8 });
+    assert.deepEqual(r.created, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
     for (const t of ['recipes', 'categories', 'tags', 'menu_items', 'recipe_tags']) assert.equal(await count(t), 0, t);
   });
 
@@ -119,12 +119,12 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const r = await runImport();
     assert.deepEqual(r.errors, []);
     assert.deepEqual(r.warnings, [], 'no unmapped field, unknown category or other warning');
-    assert.deepEqual(r.source, { categories: 8, tags: 14, recipes: 7, menu_items: 8 });
-    assert.deepEqual(r.created, { categories: 8, tags: 14, recipes: 7, menu_items: 8 });
-    assert.equal(await count('recipes'), 7);
+    assert.deepEqual(r.source, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
+    assert.deepEqual(r.created, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
+    assert.equal(await count('recipes'), 8);
     assert.equal(await count('categories'), 8);
     assert.equal(await count('tags'), 14);
-    assert.equal(await count('menu_items'), 8);
+    assert.equal(await count('menu_items'), 11);
   });
 
   it('stores each recipe with its category, tags, ingredients, steps, flags and exact slug', async () => {
@@ -152,9 +152,9 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const r = await runImport();
     assert.deepEqual(r.errors, []);
     assert.deepEqual(r.created, { categories: 0, tags: 0, recipes: 0, menu_items: 0 });
-    assert.deepEqual(r.skipped, { categories: 8, tags: 14, recipes: 7, menu_items: 8 });
+    assert.deepEqual(r.skipped, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
     assert.deepEqual(await sql('SELECT id, slug FROM recipes ORDER BY id'), before);
-    for (const [table, n] of [['recipes', 7], ['categories', 8], ['tags', 14], ['menu_items', 8]] as const) assert.equal(await count(table), n, table);
+    for (const [table, n] of [['recipes', 8], ['categories', 8], ['tags', 14], ['menu_items', 11]] as const) assert.equal(await count(table), n, table);
     assert.equal((await sql('SELECT COUNT(*) AS n FROM (SELECT slug FROM recipes GROUP BY slug HAVING COUNT(*) > 1)'))[0].n, 0);
     assert.equal(await count('recipe_ingredients'), (await sql('SELECT COUNT(*) AS n FROM recipe_ingredients'))[0].n);
   });
@@ -180,10 +180,10 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.equal((await sql('SELECT name FROM categories WHERE slug = ?', ['breakfast']))[0].name, 'Edited Breakfast');
     assert.equal((await sql('SELECT COUNT(*) AS n FROM recipe_tags WHERE recipe_id = ?', [id]))[0].n, 0, 'removed tag links stay removed');
     assert.ok(Number((await sql('SELECT COUNT(*) AS n FROM recipe_ingredients'))[0].n) === ingredientsBefore);
-    assert.equal(await count('menu_items'), 7, 'a menu edited in the admin is not restored');
+    assert.equal(await count('menu_items'), 10, 'a menu edited in the admin is not restored');
     assert.equal((await sql('SELECT COUNT(*) AS n FROM tags WHERE slug = ?', ['staging-only']))[0].n, 1);
     assert.equal(await count('tags'), 15);
-    assert.equal(await count('recipes'), 7);
+    assert.equal(await count('recipes'), 8);
 
     // Put the data back for the remaining tests.
     await sql('UPDATE recipes SET title = ?, published = 1, featured = 0 WHERE slug = ?', [recipes.find((x) => x.slug === slug)!.title, slug]);
@@ -205,7 +205,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.equal(r.created.recipes, 0);
     assert.equal(r.errors.length, 1);
     assert.match(r.errors[0], /public URL/);
-    assert.equal(await count('recipes'), 7);
+    assert.equal(await count('recipes'), 8);
   });
 
   it('reports missing images and unknown fields instead of hiding them', async () => {
@@ -243,7 +243,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
 
   it('the menu reports visibility as a real boolean (the admin UI tests !== false)', async () => {
     const data = json(await call(c, 'GET', '/api/admin/menu')).data as Array<{ visible: unknown; order: unknown }>;
-    assert.equal(data.length, 8);
+    assert.equal(data.length, 11);
     for (const item of data) {
       assert.equal(typeof item.visible, 'boolean');
       assert.equal(typeof item.order, 'number');
@@ -271,11 +271,13 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const after = json(await call(c, 'GET', '/api/admin/categories')).data as Array<{ slug: string; subcategories: string[] }>;
     assert.deepEqual(after.find((x) => x.slug === 'curries')?.subcategories, ['non-vegetarian', 'vegetarian']);
 
-    // The imported content has no sub categories; tick one on a curry and one unmapped on a breakfast recipe.
-    const curry = json(await call(c, 'GET', '/api/admin/recipes/andhra-chicken-curry')).recipe;
-    curry.subcategories = ['non-vegetarian'];
-    const tick = await post('/api/admin/recipes/andhra-chicken-curry', { recipe: curry });
-    assert.equal(tick.httpStatusCode, 200, tick.text);
+    // Make every curry non-vegetarian and tick an unmapped sub category on a breakfast recipe.
+    for (const currySlug of recipes.filter((x) => x.category === 'curries').map((x) => x.slug)) {
+      const curry = json(await call(c, 'GET', `/api/admin/recipes/${currySlug}`)).recipe;
+      curry.subcategories = ['non-vegetarian'];
+      const tick = await post(`/api/admin/recipes/${currySlug}`, { recipe: curry });
+      assert.equal(tick.httpStatusCode, 200, tick.text);
+    }
     const dosa = json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe;
     dosa.subcategories = ['vegetarian'];
     const tickDosa = await post('/api/admin/recipes/masala-dosa', { recipe: dosa });
@@ -328,7 +330,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.equal(after.steps.length, (original.steps ?? []).length);
     assert.equal(after.published, true);
     assert.match(fs.readFileSync(stagingFile(`recipes/${slug}/index.html`), 'utf8'), /edited on staging/);
-    assert.equal(await count('recipes'), 7, 'no duplicate created');
+    assert.equal(await count('recipes'), 8, 'no duplicate created');
   });
 
   it('saving the Tags tab keeps every recipe-tag link', async () => {

@@ -230,7 +230,7 @@ describe('production package (fake Astro build, real packager)', () => {
     assert.ok(!fs.existsSync(path.join(backendRoot, 'tmp/logs')), 'no logs shipped');
   });
 
-  it('seeds the backend with exactly the content committed on the current branch (HEAD): 7 recipes, 8 categories, 14 tags, 8 menu items, 40 ingredients, 23 steps', () => {
+  it('seeds the backend with exactly the content committed on the current branch (HEAD): 8 recipes, 8 categories, 14 tags, 11 menu items, 41 ingredients, 24 steps', () => {
     const branchRecipes = git('ls-tree', '--name-only', 'HEAD', 'src/content/recipes/')
       .split('\n')
       .filter((f) => f.endsWith('.json'))
@@ -255,7 +255,7 @@ describe('production package (fake Astro build, real packager)', () => {
     const count = (f: string) => JSON.parse(text(backendRoot, `seed/config/${f}.json`)).length;
     assert.deepEqual(
       { recipes: branchRecipes.length, categories: count('categories'), tags: tagNames.size, menu: count('menu'), ingredients, steps },
-      { recipes: 7, categories: 8, tags: 14, menu: 8, ingredients: 40, steps: 23 },
+      { recipes: 8, categories: 8, tags: 14, menu: 11, ingredients: 41, steps: 24 },
     );
   });
 

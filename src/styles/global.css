@@ -1130,17 +1130,31 @@ main {
   gap: 8px;
 }
 
-.serving-controls button {
-  width: 28px;
+.scale-group {
+  display: flex;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.serving-controls .scale-btn {
+  min-width: 44px;
   height: 28px;
-  border-radius: 50%;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: var(--white);
   color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+
+.serving-controls .scale-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
 }
 
 .ingredient-section-group {
@@ -1479,15 +1493,16 @@ main {
 
 .ingredient-row .ing-name {
   flex: 1;
-  min-width: 140px;
+  min-width: 200px;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 8px 12px;
   background: var(--white);
 }
 
-.ingredient-row .ing-amount {
-  width: 90px;
+.admin-form .ingredient-row input.ing-amount {
+  width: 80px;
+  flex: none;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 8px 10px;

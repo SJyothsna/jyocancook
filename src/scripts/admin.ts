@@ -1,3 +1,5 @@
+import { formatQty, parseQty } from '../lib/fractions';
+
 type Item = Record<string, any>;
 const el = (id: string) => document.getElementById(id)!;
 const content = el('admin-content'),
@@ -216,10 +218,11 @@ function unitOptionsHtml(selectedUnit: string = '') {
 }
 
 function ingredientRowHtml(item: { name?: string; amount?: number | null | string; unit?: string } = {}) {
-  const amountStr = item.amount !== null && item.amount !== undefined && item.amount !== '' ? String(item.amount) : '';
+  const amountStr =
+    item.amount !== null && item.amount !== undefined && item.amount !== '' ? formatQty(Number(item.amount)) : '';
   return `<div class="ingredient-row">
     <input type="text" class="ing-name" placeholder="Ingredient name (e.g. Mustard seeds)" value="${esc(item.name || '')}" required />
-    <input type="number" step="any" min="0" class="ing-amount" placeholder="Qty" value="${esc(amountStr)}" />
+    <input type="text" inputmode="decimal" class="ing-amount" placeholder="Qty" title="Optional. Type 1/2, 1 1/2 or 0.5" aria-label="Quantity (optional)" value="${esc(amountStr)}" />
     <select class="ing-unit">
       ${unitOptionsHtml(item.unit || '')}
     </select>
@@ -398,7 +401,7 @@ function recipeForm(r: any) {
     <!-- Structured Ingredients Section -->
     <div style="margin-top:12px">
       <div class="admin-builder-title">Ingredients by Section</div>
-      <div class="field-note" style="margin-bottom:8px">Organize ingredients into sections (e.g. "For Tempering", "For Curry", "For Marination"). Each row has ingredient name, quantity, and unit.</div>
+      <div class="field-note" style="margin-bottom:8px">Organize ingredients into sections (e.g. "For Tempering", "For Curry", "For Marination"). Each row has ingredient name, quantity, and unit. Quantity and unit are optional; type a quantity as 1/2, 1 1/2 or 0.5.</div>
       <div id="ingredient-sections" class="admin-section-container">
         ${ingredientSections.map((sec) => ingredientSectionHtml(sec)).join('')}
       </div>
@@ -454,7 +457,7 @@ function formData(f: HTMLFormElement, existing?: any) {
       if (name) {
         ingredients.push({
           name,
-          amount: amountRaw !== '' && !isNaN(Number(amountRaw)) ? Number(amountRaw) : null,
+          amount: parseQty(amountRaw),
           unit,
           ...(secTitle ? { section: secTitle } : {}),
         });
