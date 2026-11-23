@@ -108,23 +108,23 @@ class TemplateRenderer {
               required
             />
             <button type="submit" aria-label="Search">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </button>
           </form>
 
-          <div class="top-links">
-            <a href="/recipes/" class="top-link">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-              <span>My Recipes</span>
-            </a>
-          </div>
         </div>
       </div>
 
       <div class="nav-shell">
-        <nav class="container nav" aria-label="Main navigation">
-          {$this->renderNavLinks($activeNav)}
-        </nav>
+        <div class="container">
+          <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+            <span>Browse categories</span>
+            {$this->icon('menu')}
+          </button>
+          <nav class="nav" id="site-nav" aria-label="Main navigation">
+            {$this->renderNavLinks($activeNav)}
+          </nav>
+        </div>
       </div>
     </header>
 
@@ -144,9 +144,47 @@ class TemplateRenderer {
         <small class="muted">© {$this->esc((string)date('Y'))} {$this->esc($this->siteName)}. All rights reserved.</small>
       </div>
     </footer>
+    <script>
+      (function () {
+        var t = document.querySelector('.nav-toggle'), n = document.getElementById('site-nav');
+        if (!t || !n) return;
+        t.addEventListener('click', function () {
+          var open = n.classList.toggle('open');
+          t.setAttribute('aria-expanded', String(open));
+        });
+      })();
+    </script>
   </body>
 </html>
 HTML;
+    }
+
+    /** Inline Lucide-style SVG icons, matching the @lucide/astro icons used by the Astro pages. */
+    private function icon(string $name, string $class = ''): string {
+        static $paths = [
+            'menu' => '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
+            'clock' => '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+            'flame' => '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+            'users' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+            'star' => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+            'zap' => '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+            'heart' => '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+            'arrow-up-right' => '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
+            'printer' => '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/>',
+            'utensils' => '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+            'lightbulb' => '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+        ];
+        $cls = $class !== '' ? ' class="' . $class . '"' : '';
+        return '<svg' . $cls . ' width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? '') . '</svg>';
+    }
+
+    /** "Homemade Sambar Recipe with Toor Dal and Vegetables" -> "Homemade Sambar". Same rules as the Astro page. */
+    private function shortTitle(string $title): string {
+        $t = preg_replace('/\s*\([^)]*\)/u', '', $title) ?? $title;
+        $t = preg_split('/\s+recipe\b/iu', $t)[0] ?? $t;
+        $t = preg_split('/\s+with\s+/iu', $t)[0] ?? $t;
+        $t = trim($t);
+        return $t !== '' ? $t : $title;
     }
 
     private function renderRobots(bool $noindex): string {
@@ -207,18 +245,22 @@ HTML;
             ['href' => '/category/non-vegetarian/', 'label' => 'Non-Vegetarian'],
         ];
 
+        $matches = static fn(string $href): bool => ($href === '/' && $activeNav === '/') || ($href !== '/' && str_starts_with($activeNav, $href));
+        $hasMatch = false;
+        foreach ($links as $link) {
+            if ($matches($link['href'])) { $hasMatch = true; break; }
+        }
+        // Category and tag pages without a nav link of their own highlight "Recipes".
+        $fallbackRecipes = !$hasMatch && (str_starts_with($activeNav, '/category/') || str_starts_with($activeNav, '/tag/'));
+
         $html = '';
         foreach ($links as $link) {
             $href = $link['href'];
             $label = $link['label'];
-            $isActive = ($href === '/' && $activeNav === '/') || ($href !== '/' && str_starts_with($activeNav, $href));
-            $activeClass = $isActive ? ' class="active"' : '';
+            $isActive = $hasMatch ? $matches($href) : ($fallbackRecipes && $href === '/recipes/');
+            $activeClass = $isActive ? ' class="active" aria-current="page"' : '';
 
-            $iconSvg = $href === '/'
-                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:4px;"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
-                : '';
-
-            $html .= "<a href=\"{$this->esc($href)}\"{$activeClass}>{$iconSvg}<span>{$this->esc($label)}</span></a>\n";
+            $html .= "<a href=\"{$this->esc($href)}\"{$activeClass}><span>{$this->esc($label)}</span></a>\n";
         }
 
         return $html;
@@ -227,13 +269,13 @@ HTML;
     public function renderRecipeCard(array $recipe): string {
         $url = '/recipes/' . $recipe['slug'] . '/';
         $totalTime = ($recipe['prepTime'] ?? 0) + ($recipe['cookTime'] ?? 0);
-        $dietHtml = !empty($recipe['diet']) ? ' • ' . $this->esc($recipe['diet']) : '';
+        $dietHtml = !empty($recipe['diet']) ? ' · ' . $this->esc($recipe['diet']) : '';
         $categoryName = $recipe['category_name'] ?? ucfirst($recipe['category'] ?? '');
 
         return <<<HTML
-<a class="recipe-card" href="{$this->esc($url)}">
+<article class="recipe-card">
   <div class="recipe-card-media">
-    <img src="{$this->esc($recipe['image'])}" alt="{$this->esc($recipe['title'])}" loading="lazy" />
+    <img src="{$this->esc($recipe['image'])}" alt="{$this->esc($recipe['title'])}" width="600" height="400" loading="lazy" decoding="async" />
     <div class="recipe-time-badge">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <span>{$totalTime} min</span>
@@ -241,17 +283,14 @@ HTML;
   </div>
   <div class="recipe-card-content">
     <div class="recipe-card-header">
-      <h3>{$this->esc($recipe['title'])}</h3>
-      <button type="button" class="recipe-fav-btn" aria-label="Save {$this->esc($recipe['title'])} to favourites">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-      </button>
+      <h3><a class="recipe-card-link" href="{$this->esc($url)}" title="{$this->esc($recipe['title'])}">{$this->esc($recipe['title'])}</a></h3>
     </div>
     <div class="recipe-card-meta">
       <span>{$this->esc($categoryName)}</span>
       <span>{$dietHtml}</span>
     </div>
   </div>
-</a>
+</article>
 HTML;
     }
 
@@ -353,6 +392,11 @@ HTML;
         // Tags HTML
         $tagsHtml = "<a class=\"pill\" href=\"/category/{$this->esc($categorySlug)}/\">{$this->esc($categoryName)}</a>\n";
         foreach ($recipe['tags'] as $tag) {
+            // The category chip is always shown, so a tag that repeats the category is left out.
+            $tagKey = mb_strtolower(trim((string)$tag));
+            if ($tagKey === mb_strtolower(trim((string)$categoryName)) || $tagKey === mb_strtolower((string)$categorySlug)) {
+                continue;
+            }
             $tagSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $tag));
             $tagsHtml .= "<a class=\"pill\" href=\"/tag/{$this->esc($tagSlug)}/\">{$this->esc($tag)}</a>\n";
         }
@@ -371,7 +415,7 @@ HTML;
 </div>
 HTML;
         } else {
-            $mediaHtml = "<img class=\"recipe-main-image\" src=\"{$this->esc($recipe['image'])}\" alt=\"{$this->esc($recipe['title'])}\" />";
+            $mediaHtml = "<img class=\"recipe-main-image\" src=\"{$this->esc($recipe['image'])}\" alt=\"{$this->esc($recipe['title'])}\" width=\"800\" height=\"600\" />";
         }
 
         // Calories pill inside meta strip
@@ -379,7 +423,7 @@ HTML;
         if (isset($recipe['nutrition']['calories'])) {
             $caloriesPill = <<<HTML
 <div class="meta-item">
-  <span class="meta-icon">⚡</span>
+  {$this->icon('zap', 'meta-icon')}
   <div class="meta-content">
     <span class="meta-label">Calories</span>
     <strong class="meta-value">{$this->esc((string)$recipe['nutrition']['calories'])} kcal</strong>
@@ -409,7 +453,7 @@ HTML;
             if ($pills !== '') {
                 $nutritionHtml = <<<HTML
 <div class="nutrition-strip">
-  <span class="nutrition-label">Nutrition:</span>
+  <span class="nutrition-label">Nutrition</span>
   <div class="nutrition-items">
     {$pills}
   </div>
@@ -464,12 +508,20 @@ HTML;
                 ? "<div class=\"step-image-wrap\"><img class=\"step-image\" src=\"{$this->esc($s['image'])}\" alt=\"{$this->esc($s['title'])}\" loading=\"lazy\" /></div>"
                 : '';
 
+            // A step titled "Optional: ..." keeps its wording and gets an "Optional" label.
+            $stepTitle = (string)$s['title'];
+            $optionalHtml = '';
+            if (preg_match('/^\s*optional\s*[:\-\x{2013}\x{2014}]\s*(.+)$/iu', $stepTitle, $om)) {
+                $stepTitle = trim($om[1]);
+                $optionalHtml = '<span class="step-optional">Optional</span>';
+            }
+
             $stepsHtml .= <<<HTML
 <div class="step">
   <div class="step-num">{$num}</div>
   <div class="step-body">
     <div class="step-content">
-      <h3>{$this->esc($s['title'])}</h3>
+      <h3>{$this->esc($stepTitle)}{$optionalHtml}</h3>
       <p>{$this->esc($s['text'])}</p>
     </div>
     {$imgHtml}
@@ -487,8 +539,8 @@ HTML;
             if (!empty($tips)) {
                 $tipsLi = implode('', array_map(fn($t) => "<li>{$this->esc($t)}</li>", $tips));
                 $tipsBlock = <<<HTML
-<div class="panel panel-warm" style="margin-bottom:0">
-  <h2>💡 Pro Tips</h2>
+<div class="panel panel-warm">
+  <h2>{$this->icon('lightbulb')}Pro Tips</h2>
   <ul>{$tipsLi}</ul>
 </div>
 HTML;
@@ -498,8 +550,8 @@ HTML;
             if (!empty($serveWith)) {
                 $serveStr = implode(' · ', array_map([$this, 'esc'], $serveWith));
                 $serveBlock = <<<HTML
-<div class="panel" style="margin-bottom:0">
-  <h2>🍽️ Serve with</h2>
+<div class="panel">
+  <h2>{$this->icon('utensils')}Serve with</h2>
   <p>{$serveStr}</p>
 </div>
 HTML;
@@ -575,20 +627,22 @@ HTML;
         }
 
         $bodyContent = <<<HTML
-<div class="container">
+<div class="container recipe-page">
   <div class="breadcrumb">
     <a href="/">Home</a> › <a href="/category/{$this->esc($categorySlug)}/">{$this->esc($categoryName)}</a> › {$this->esc($recipe['title'])}
   </div>
   <div class="recipe-title">
     <h1>{$this->esc($recipe['title'])}</h1>
-    <p class="muted intro">{$this->esc($recipe['description'])}</p>
+    <p class="recipe-by">Recipe by <strong>JyoCanCook</strong></p>
+
+    <p class="intro">{$this->esc($recipe['description'])}</p>
     <div class="tags">
       {$tagsHtml}
     </div>
     <div class="recipe-actions">
-      <button id="save" class="btn btn-outline" type="button">♡ Save</button>
-      <button id="share" class="btn btn-outline" type="button">↗ Share</button>
-      <button class="btn btn-outline" type="button" onclick="window.print()">▣ Print</button>
+      <button id="save" class="btn btn-outline" type="button" aria-pressed="false">{$this->icon('heart')}<span id="save-label">Save</span></button>
+      <button id="share" class="btn btn-outline" type="button">{$this->icon('arrow-up-right')}Share</button>
+      <button class="btn btn-outline" type="button" onclick="window.print()">{$this->icon('printer')}Print</button>
     </div>
   </div>
 
@@ -598,28 +652,28 @@ HTML;
 
       <div class="meta-strip">
         <div class="meta-item">
-          <span class="meta-icon">◷</span>
+          {$this->icon('clock', 'meta-icon')}
           <div class="meta-content">
             <span class="meta-label">Prep Time</span>
             <strong class="meta-value">{$this->esc((string)($recipe['prepTime'] ?? 15))} min</strong>
           </div>
         </div>
         <div class="meta-item">
-          <span class="meta-icon">♨</span>
+          {$this->icon('flame', 'meta-icon')}
           <div class="meta-content">
             <span class="meta-label">Cook Time</span>
             <strong class="meta-value">{$this->esc((string)($recipe['cookTime'] ?? 30))} min</strong>
           </div>
         </div>
         <div class="meta-item">
-          <span class="meta-icon">♧</span>
+          {$this->icon('users', 'meta-icon')}
           <div class="meta-content">
             <span class="meta-label">Servings</span>
             <strong class="meta-value">{$this->esc((string)($recipe['servings'] ?? 4))}</strong>
           </div>
         </div>
         <div class="meta-item">
-          <span class="meta-icon">☆</span>
+          {$this->icon('star', 'meta-icon')}
           <div class="meta-content">
             <span class="meta-label">Difficulty</span>
             <strong class="meta-value">{$this->esc($recipe['difficulty'] ?? 'Easy')}</strong>
@@ -650,7 +704,7 @@ HTML;
       </div>
 
       <section class="steps">
-        <h2>How to make {$this->esc($recipe['title'])}</h2>
+        <h2>How to Make {$this->esc($this->shortTitle((string)$recipe['title']))}</h2>
         {$stepsHtml}
       </section>
 
@@ -669,6 +723,8 @@ HTML;
     var base = {$recipe['servings']};
     var slug = '{$this->esc($recipe['slug'])}';
     var output = document.querySelector('#servings');
+    // Servings are shown as decimals (2.5), unlike ingredient quantities which use fractions.
+    function formatServings(n) { return String(Number(n.toFixed(2))); }
     function formatQty(n) {
       var whole = Math.floor(n), frac = n - whole;
       if (frac < 0.02) return String(whole);
@@ -680,7 +736,7 @@ HTML;
       return String(Number(n.toFixed(2)));
     }
     function setScale(scale) {
-      if (output) output.textContent = formatQty(base * scale);
+      if (output) output.textContent = formatServings(base * scale);
       document.querySelectorAll('.qty').forEach(function(el) {
         var raw = el.getAttribute('data-amount');
         if (!raw || isNaN(Number(raw))) {
@@ -701,8 +757,13 @@ HTML;
 
     var saved = JSON.parse(localStorage.getItem('jyo-saved') || '[]');
     var saveBtn = document.querySelector('#save');
-    if (saveBtn) {
-      saveBtn.textContent = saved.indexOf(slug) !== -1 ? '♥ Saved' : '♡ Save';
+    var saveLabel = document.querySelector('#save-label');
+    function showSaved(isSaved) {
+      saveBtn.setAttribute('aria-pressed', String(isSaved));
+      saveLabel.textContent = isSaved ? 'Saved' : 'Save';
+    }
+    if (saveBtn && saveLabel) {
+      showSaved(saved.indexOf(slug) !== -1);
       saveBtn.onclick = function() {
         var arr = JSON.parse(localStorage.getItem('jyo-saved') || '[]');
         var idx = arr.indexOf(slug);
@@ -712,7 +773,7 @@ HTML;
           arr.push(slug);
         }
         localStorage.setItem('jyo-saved', JSON.stringify(arr));
-        saveBtn.textContent = arr.indexOf(slug) !== -1 ? '♥ Saved' : '♡ Save';
+        showSaved(arr.indexOf(slug) !== -1);
       };
     }
 
@@ -773,11 +834,9 @@ HTML;
         }
         $subcategoriesHtml = $subcategoryBoxes === '' ? '' : <<<HTML
 <div class="container">
-  <section class="section subcat-section">
-    <div class="section-heading-centered">
-      <div class="section-title-flourish">
-        <h2 class="section-title">Browse by Subcategory</h2>
-      </div>
+  <section class="home-section subcat-section" aria-labelledby="subcat-title">
+    <div class="section-head">
+      <h2 class="section-title" id="subcat-title">Browse by Subcategory</h2>
     </div>
     <nav class="subcat-grid" aria-label="Browse by subcategory">
       {$subcategoryBoxes}
@@ -794,17 +853,17 @@ HTML;
       <h1>Homemade Recipes, Made Simple</h1>
       <p>Discover authentic Indian dishes, everyday meals and family favourites.</p>
       <a class="btn" href="/recipes/">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:6px;"><path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"/><path d="M14 2v20"/><path d="M4 2v20"/><path d="M4 2v6a3 3 0 0 0 3 3 3 3 0 0 0 3-3V2"/></svg>
-        <span>Explore Recipes →</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"/><path d="M14 2v20"/><path d="M4 2v20"/><path d="M4 2v6a3 3 0 0 0 3 3 3 3 0 0 0 3-3V2"/></svg>
+        <span>Explore Recipes</span>
       </a>
     </div>
-    <aside class="hero-about panel panel-warm">
+    <aside class="hero-about panel panel-warm" aria-labelledby="about-card-title">
       <div class="hero-about-inner">
-        <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" /></div>
+        <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" width="1446" height="1087" /></div>
         <div class="about-text">
-          <h2>About me</h2>
+          <h2 id="about-card-title">About Me</h2>
           <p>Cooking is my passion, and I believe great taste doesn't need complicated recipes. Through JyoCanCook, I share simple, authentic recipes inspired by our elders, keeping the flavours of home alive for the younger generation to enjoy and cherish.</p>
-          <p><em>Simple to cook. Rich in flavour. Rooted in tradition.</em></p>
+          <p class="about-tagline">Simple to cook. Rich in flavour. Rooted in tradition.</p>
           <a class="link" href="/about/">Read more →</a>
         </div>
       </div>
@@ -813,12 +872,10 @@ HTML;
 </div>
 
 {$subcategoriesHtml}<div class="container">
-  <section class="section">
-    <div class="section-heading-centered">
-      <div class="section-title-flourish">
-        <h2 class="section-title">Latest Recipes</h2>
-      </div>
-      <a class="link link-right" href="/recipes/">View All Recipes →</a>
+  <section class="home-section" aria-labelledby="latest-title">
+    <div class="section-head">
+      <h2 class="section-title" id="latest-title">Latest Recipes</h2>
+      <a class="link" href="/recipes/">View All Recipes →</a>
     </div>
 
     <div class="cards">
@@ -826,10 +883,10 @@ HTML;
     </div>
   </section>
 
-  <section class="section" style="padding-top: 0;">
-    <div class="panel panel-warm" style="text-align: center; padding: 44px 24px;">
-      <h2>Cooking brings us together</h2>
-      <p class="muted" style="max-width: 600px; margin: 0 auto 20px;">
+  <section class="home-section" aria-labelledby="cta-title">
+    <div class="cta-panel">
+      <h2 id="cta-title">Cooking brings us together</h2>
+      <p>
         Explore favourite recipes, discover traditional flavours and make memories around the family table.
       </p>
       <a class="btn" href="/recipes/">Discover Recipes</a>
@@ -946,7 +1003,7 @@ HTML;
 
         $canonicalPath = '/category/' . $category['slug'] . '/';
         $iconHtml = !empty($category['image'])
-            ? "<img src=\"{$this->esc($category['image'])}\" alt=\"\" style=\"width:20px;height:20px;object-fit:contain\" />"
+            ? "<img src=\"{$this->esc($category['image'])}\" alt=\"\" width=\"16\" height=\"16\" />"
             : '';
 
         $cardsHtml = '';
@@ -955,9 +1012,11 @@ HTML;
             $cardsHtml .= "<div data-subcategory=\"{$sub}\">" . $this->renderRecipeCard($r) . "</div>\n";
         }
 
+        $total = count($recipes);
+        $countLabel = $total . ' ' . ($total === 1 ? 'recipe' : 'recipes');
         $gridHtml = !empty($cardsHtml)
-            ? "<div class=\"cards\" id=\"category-list\">{$cardsHtml}</div>"
-            : '<div class="empty">More recipes are coming soon in this category.</div>';
+            ? "<p class=\"result-count\" id=\"result-count\" aria-live=\"polite\">{$countLabel}</p>\n<div class=\"cards\" id=\"category-list\">{$cardsHtml}</div>"
+            : '<div class="empty-state"><h2>No recipes available yet.</h2><p>Explore other categories to find something delicious.</p><a class="btn" href="/recipes/">All Recipes</a></div>';
 
         // Subcategory chips: this category's own subcategories that are used by this page's recipes.
         $subChips = '';
@@ -967,7 +1026,7 @@ HTML;
             if (!$used) continue;
             $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc((string)$slug)}\" aria-pressed=\"false\">{$this->esc($name)}</button>\n";
         }
-        $subcategoryNav = $subChips === '' ? '' : "<div id=\"subcategory-chips\" style=\"display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px\" role=\"group\" aria-label=\"Filter by subcategory\">\n"
+        $subcategoryNav = $subChips === '' ? '' : "<div id=\"subcategory-chips\" class=\"filter-chips\" role=\"group\" aria-label=\"Filter by subcategory\">\n"
             . "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-subcategory=\"\" aria-pressed=\"true\">All</button>\n"
             . $subChips . "</div>\n";
         $filterScript = $subChips === '' ? '' : <<<HTML
@@ -975,6 +1034,7 @@ HTML;
   (function() {
     var chips = Array.prototype.slice.call(document.querySelectorAll('#subcategory-chips .tag-chip'));
     var items = Array.prototype.slice.call(document.querySelectorAll('#category-list > div'));
+    var countEl = document.getElementById('result-count');
     var active = '';
     chips.forEach(function(chip) {
       chip.addEventListener('click', function() {
@@ -985,24 +1045,32 @@ HTML;
           c.classList.toggle('tag-chip-selected', on);
           c.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
+        var visible = 0;
         items.forEach(function(el) {
           var subs = (el.getAttribute('data-subcategory') || '').split(',');
-          el.classList.toggle('hidden', active !== '' && subs.indexOf(active) === -1);
+          var hide = active !== '' && subs.indexOf(active) === -1;
+          el.classList.toggle('hidden', hide);
+          if (!hide) visible += 1;
         });
+        if (countEl) countEl.textContent = visible + (visible === 1 ? ' recipe' : ' recipes');
       });
     });
   })();
 </script>
 HTML;
 
+        $descriptionHtml = !empty($category['description'])
+            ? '<p class="page-lead">' . $this->esc($category['description']) . '</p>'
+            : '';
+
         $content = <<<HTML
-<div class="container section">
-  <span class="eyebrow" style="display:inline-flex;align-items:center;gap:6px">
+<div class="container section listing-page">
+  <span class="eyebrow">
     {$iconHtml}
     <span>Recipe category</span>
   </span>
-  <h1>{$this->esc($category['name'])}</h1>
-  <p class="muted">{$this->esc($category['description'])}</p>
+  <h1 class="page-title">{$this->esc($category['name'])}</h1>
+  {$descriptionHtml}
   {$subcategoryNav}{$gridHtml}
 </div>
 {$filterScript}
@@ -1151,15 +1219,15 @@ HTML;
 
     public function renderAboutPage(): string {
         $content = <<<HTML
-<div class="container section">
-  <span class="eyebrow">About me</span>
+<div class="container section about-page">
   <div class="about-layout">
-    <img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" />
+    <img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" width="1446" height="1087" />
     <div class="about-text">
-      <h1>Simple cooking, unforgettable flavours.</h1>
+      <span class="eyebrow">About Me</span>
+      <h1 class="page-title">Simple cooking, unforgettable flavours.</h1>
       <p>Cooking is my passion, and I believe that delicious food doesn't have to be complicated. My love for cooking comes from the simple, authentic recipes passed down by our elders — recipes filled with flavour, tradition, and memories.</p>
       <p>Through JyoCanCook, I want to make these treasured recipes easy for anyone to prepare, especially the younger generation, so they can enjoy the flavours we grew up with and keep the taste of home alive for generations to come.</p>
-      <p><em>Simple to cook. Rich in flavour. Rooted in tradition.</em></p>
+      <p class="about-tagline">Simple to cook. Rich in flavour. Rooted in tradition.</p>
     </div>
   </div>
 </div>

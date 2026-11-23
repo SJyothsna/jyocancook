@@ -5,9 +5,9 @@ import { Clock } from '@lucide/astro';
 const { recipe } = Astro.props as { recipe: Recipe };
 const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
 ---
-<a class="recipe-card" href={recipeUrl(recipe)}>
+<article class="recipe-card">
   <div class="recipe-card-media">
-    <img src={recipe.image} alt={recipe.title} loading="lazy" />
+    <img src={recipe.image} alt={recipe.title} width="600" height="400" loading="lazy" decoding="async" />
     <div class="recipe-time-badge">
       <Clock size={14} aria-hidden="true" />
       <span>{totalTime} min</span>
@@ -15,11 +15,11 @@ const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
   </div>
   <div class="recipe-card-content">
     <div class="recipe-card-header">
-      <h3>{recipe.title}</h3>
+      <h3><a class="recipe-card-link" href={recipeUrl(recipe)} title={recipe.title}>{recipe.title}</a></h3>
     </div>
     <div class="recipe-card-meta">
       <span>{categoryName(recipe.category)}</span>
-      {recipe.diet && <span> • {recipe.diet}</span>}
+      {recipe.diet && <span> · {recipe.diet}</span>}
     </div>
   </div>
-</a>
+</article>

@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import RecipeCard from '../components/RecipeCard.astro';
-import SectionFlourish from '../components/icons/SectionFlourish.astro';
 import { recipes, subcategories as allSubcategories } from '../lib/data';
 import { Utensils } from '@lucide/astro';
 
@@ -28,16 +27,16 @@ const subcategories = [...new Map(allSubcategories.map((s) => [s.slug, s.name]))
         </p>
         <a class="btn" href="/recipes/">
           <Utensils size={18} aria-hidden="true" />
-          <span>Explore Recipes →</span>
+          <span>Explore Recipes</span>
         </a>
       </div>
-      <aside class="hero-about panel panel-warm">
+      <aside class="hero-about panel panel-warm" aria-labelledby="about-card-title">
         <div class="hero-about-inner">
-          <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" /></div>
+          <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" width="1446" height="1087" /></div>
           <div class="about-text">
-            <h2>About me</h2>
+            <h2 id="about-card-title">About Me</h2>
             <p>Cooking is my passion, and I believe great taste doesn't need complicated recipes. Through JyoCanCook, I share simple, authentic recipes inspired by our elders, keeping the flavours of home alive for the younger generation to enjoy and cherish.</p>
-            <p><em>Simple to cook. Rich in flavour. Rooted in tradition.</em></p>
+            <p class="about-tagline">Simple to cook. Rich in flavour. Rooted in tradition.</p>
             <a class="link" href="/about/">Read more →</a>
           </div>
         </div>
@@ -48,13 +47,9 @@ const subcategories = [...new Map(allSubcategories.map((s) => [s.slug, s.name]))
   <!-- Subcategories -->
   {subcategories.length > 0 && (
     <div class="container">
-      <section class="section subcat-section">
-        <div class="section-heading-centered">
-          <div class="section-title-flourish">
-            <SectionFlourish side="left" class="flourish-icon" />
-            <h2 class="section-title">Browse by Subcategory</h2>
-            <SectionFlourish side="right" class="flourish-icon" />
-          </div>
+      <section class="home-section subcat-section" aria-labelledby="subcat-title">
+        <div class="section-head">
+          <h2 class="section-title" id="subcat-title">Browse by Subcategory</h2>
         </div>
         <nav class="subcat-grid" aria-label="Browse by subcategory">
           {subcategories.map((s) => (
@@ -73,14 +68,10 @@ const subcategories = [...new Map(allSubcategories.map((s) => [s.slug, s.name]))
 
   <!-- Latest Recipes Section -->
   <div class="container">
-    <section class="section">
-      <div class="section-heading-centered">
-        <div class="section-title-flourish">
-          <SectionFlourish side="left" class="flourish-icon" />
-          <h2 class="section-title">Latest Recipes</h2>
-          <SectionFlourish side="right" class="flourish-icon" />
-        </div>
-        <a class="link link-right" href="/recipes/">View All Recipes →</a>
+    <section class="home-section" aria-labelledby="latest-title">
+      <div class="section-head">
+        <h2 class="section-title" id="latest-title">Latest Recipes</h2>
+        <a class="link" href="/recipes/">View All Recipes →</a>
       </div>
 
       <div class="cards">
@@ -89,10 +80,10 @@ const subcategories = [...new Map(allSubcategories.map((s) => [s.slug, s.name]))
     </section>
 
     <!-- Warm Banner -->
-    <section class="section" style="padding-top: 0;">
-      <div class="panel panel-warm" style="text-align: center; padding: 44px 24px;">
-        <h2>Cooking brings us together</h2>
-        <p class="muted" style="max-width: 600px; margin: 0 auto 20px;">
+    <section class="home-section" aria-labelledby="cta-title">
+      <div class="cta-panel">
+        <h2 id="cta-title">Cooking brings us together</h2>
+        <p>
           Explore favourite recipes, discover traditional flavours and make memories around the family table.
         </p>
         <a class="btn" href="/recipes/">Discover Recipes</a>

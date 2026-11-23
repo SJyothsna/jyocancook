@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { House, Search } from '@lucide/astro';
+import { Menu, Search } from '@lucide/astro';
 import { menu } from '../lib/data';
 
 const {
@@ -11,6 +11,13 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+
+// Active nav item: the matching link, or "Recipes" on category/tag pages that have no link of their own.
+const path = Astro.url.pathname;
+const matches = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+const hasMatch = menu.some((item) => matches(item.href));
+const isActive = (href: string) =>
+  hasMatch ? matches(href) : href === '/recipes/' && (path.startsWith('/category/') || path.startsWith('/tag/'));
 ---
 <!doctype html>
 <html lang="en">
@@ -47,26 +54,31 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString();
               required
             />
             <button type="submit" aria-label="Search">
-              <Search size={18} aria-hidden="true" />
+              <Search size={20} aria-hidden="true" />
             </button>
           </form>
+
         </div>
       </div>
 
       <div class="nav-shell">
-        <nav class="container nav" aria-label="Main navigation">
-          {menu.map((item) => (
-            <a
-              href={item.href}
-              class:list={{
-                active: item.href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(item.href),
-              }}
-            >
-              {item.href === '/' && <House size={16} aria-hidden="true" />}
-              <span>{item.label}</span>
-            </a>
-          ))}
-        </nav>
+        <div class="container">
+          <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+            <span>Browse categories</span>
+            <Menu size={18} aria-hidden="true" />
+          </button>
+          <nav class="nav" id="site-nav" aria-label="Main navigation">
+            {menu.map((item) => (
+              <a
+                href={item.href}
+                class:list={{ active: isActive(item.href) }}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                <span>{item.label}</span>
+              </a>
+            ))}
+          </nav>
+        </div>
       </div>
     </header>
 
@@ -86,5 +98,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString();
         <small class="muted">© {new Date().getFullYear()} JyoCanCook. All rights reserved.</small>
       </div>
     </footer>
+    <script is:inline>
+      (function () {
+        var t = document.querySelector('.nav-toggle'), n = document.getElementById('site-nav');
+        if (!t || !n) return;
+        t.addEventListener('click', function () {
+          var open = n.classList.toggle('open');
+          t.setAttribute('aria-expanded', String(open));
+        });
+      })();
+    </script>
   </body>
 </html>

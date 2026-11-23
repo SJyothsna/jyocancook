@@ -19,17 +19,18 @@ const list = recipes.filter(
 const subcategories = allSubcategories.filter(
   (s) => category.subcategories?.includes(s.slug) && list.some((r) => r.subcategories?.includes(s.slug)),
 );
+const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
 ---
 <Base title={category.name} description={category.description}>
-  <div class="container section">
-    <span class="eyebrow" style="display:inline-flex;align-items:center;gap:6px">
-      {category.image && <img src={category.image} alt="" style="width:20px;height:20px;object-fit:contain" />}
+  <div class="container section listing-page">
+    <span class="eyebrow">
+      {category.image && <img src={category.image} alt="" width="16" height="16" />}
       <span>Recipe category</span>
     </span>
-    <h1>{category.name}</h1>
-    <p class="muted">{category.description}</p>
+    <h1 class="page-title">{category.name}</h1>
+    {category.description && <p class="page-lead">{category.description}</p>}
     {subcategories.length > 0 && (
-      <div id="subcategory-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px" role="group" aria-label="Filter by subcategory">
+      <div id="subcategory-chips" class="filter-chips" role="group" aria-label="Filter by subcategory">
         <button type="button" class="tag-chip tag-chip-selected" data-subcategory="" aria-pressed="true">All</button>
         {subcategories.map((s) => (
           <button type="button" class="tag-chip" data-subcategory={s.slug} aria-pressed="false">{s.name}</button>
@@ -37,11 +38,18 @@ const subcategories = allSubcategories.filter(
       </div>
     )}
     {list.length ? (
-      <div class="cards" id="category-list">
-        {list.map((r) => <div data-subcategory={(r.subcategories ?? []).join(',')}><RecipeCard recipe={r} /></div>)}
-      </div>
+      <>
+        <p class="result-count" id="result-count" aria-live="polite">{countLabel(list.length)}</p>
+        <div class="cards" id="category-list">
+          {list.map((r) => <div data-subcategory={(r.subcategories ?? []).join(',')}><RecipeCard recipe={r} /></div>)}
+        </div>
+      </>
     ) : (
-      <div class="empty">More recipes are coming soon in this category.</div>
+      <div class="empty-state">
+        <h2>No recipes available yet.</h2>
+        <p>Explore other categories to find something delicious.</p>
+        <a class="btn" href="/recipes/">All Recipes</a>
+      </div>
     )}
   </div>
 </Base>
@@ -49,6 +57,7 @@ const subcategories = allSubcategories.filter(
 <script>
   const chips = [...document.querySelectorAll<HTMLButtonElement>('#subcategory-chips .tag-chip')];
   const items = [...document.querySelectorAll<HTMLElement>('#category-list > div')];
+  const count = document.getElementById('result-count');
   let active = '';
   chips.forEach((chip) =>
     chip.addEventListener('click', () => {
@@ -59,7 +68,13 @@ const subcategories = allSubcategories.filter(
         c.classList.toggle('tag-chip-selected', on);
         c.setAttribute('aria-pressed', String(on));
       });
-      items.forEach((el) => el.classList.toggle('hidden', active !== '' && !(el.dataset.subcategory ?? '').split(',').includes(active)));
+      let visible = 0;
+      items.forEach((el) => {
+        const hide = active !== '' && !(el.dataset.subcategory ?? '').split(',').includes(active);
+        el.classList.toggle('hidden', hide);
+        if (!hide) visible += 1;
+      });
+      if (count) count.textContent = `${visible} ${visible === 1 ? 'recipe' : 'recipes'}`;
     }),
   );
 </script>

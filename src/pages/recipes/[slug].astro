@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import { recipes, categoryName, type Recipe } from '../../lib/data';
 import { formatQty } from '../../lib/fractions';
+import { ArrowUpRight, Clock, Flame, Heart, Lightbulb, Printer, Star, Users, Utensils, Zap } from '@lucide/astro';
 
 export function getStaticPaths() {
   return recipes.map((recipe) => ({ params: { slug: recipe.slug }, props: { recipe } }));
@@ -61,6 +62,23 @@ function getYouTubeEmbedUrl(url?: string): string | null {
 
 const youtubeEmbedUrl = getYouTubeEmbedUrl(recipe.youtubeUrl);
 
+// The category chip is always shown, so a tag that repeats the category is left out.
+const categoryLabel = categoryName(recipe.category).trim().toLowerCase();
+const displayTags = recipe.tags.filter((tag) => {
+  const t = tag.trim().toLowerCase();
+  return t !== categoryLabel && t !== recipe.category.toLowerCase();
+});
+
+// "Homemade Sambar Recipe with Toor Dal and Vegetables" -> "Homemade Sambar" for the instructions heading.
+const shortTitle =
+  recipe.title.replace(/\s*\([^)]*\)/g, '').split(/\s+recipe\b/i)[0].split(/\s+with\s+/i)[0].trim() || recipe.title;
+
+// A step titled "Optional: ..." keeps its wording and gets an "Optional" label.
+const displaySteps = recipe.steps.map((s) => {
+  const m = s.title.match(/^\s*optional\s*[:\-\u2013\u2014]\s*(.+)$/i);
+  return m ? { ...s, title: m[1].trim(), optional: true } : { ...s, optional: false };
+});
+
 // Group ingredients by section if sections exist
 const ingredientSections: { title?: string; items: typeof recipe.ingredients }[] = [];
 recipe.ingredients.forEach((ing) => {
@@ -107,23 +125,26 @@ const structured = {
 ---
 <Base title={recipe.title} description={recipe.description} image={recipe.image}>
   <script type="application/ld+json" slot="head" set:html={JSON.stringify(structured).replace(/</g, '\\u003c')} />
-  <div class="container">
+  <div class="container recipe-page">
     <div class="breadcrumb">
       <a href="/">Home</a> › <a href={`/category/${recipe.category}/`}>{categoryName(recipe.category)}</a> › {recipe.title}
     </div>
     <div class="recipe-title">
       <h1>{recipe.title}</h1>
-      <p class="muted intro">{recipe.description}</p>
+      <p class="recipe-by">Recipe by <strong>JyoCanCook</strong></p>
+      <p class="intro">{recipe.description}</p>
       <div class="tags">
         <a class="pill" href={`/category/${recipe.category}/`}>{categoryName(recipe.category)}</a>
-        {recipe.tags.map((tag) => (
+        {displayTags.map((tag) => (
           <a class="pill" href={`/tag/${encodeURIComponent(tag.toLowerCase().replace(/\s+/g, '-'))}/`}>{tag}</a>
         ))}
       </div>
       <div class="recipe-actions">
-        <button id="save" class="btn btn-outline" type="button">♡ Save</button>
-        <button id="share" class="btn btn-outline" type="button">↗ Share</button>
-        <button class="btn btn-outline" type="button" onclick="window.print()">▣ Print</button>
+        <button id="save" class="btn btn-outline" type="button" aria-pressed="false">
+          <Heart aria-hidden="true" /><span id="save-label">Save</span>
+        </button>
+        <button id="share" class="btn btn-outline" type="button"><ArrowUpRight aria-hidden="true" />Share</button>
+        <button class="btn btn-outline" type="button" onclick="window.print()"><Printer aria-hidden="true" />Print</button>
       </div>
     </div>
 
@@ -140,33 +161,33 @@ const structured = {
             ></iframe>
           </div>
         ) : (
-          <img class="recipe-main-image" src={recipe.image} alt={recipe.title} />
+          <img class="recipe-main-image" src={recipe.image} alt={recipe.title} width="800" height="600" />
         )}
 
         <div class="meta-strip">
           <div class="meta-item">
-            <span class="meta-icon">◷</span>
+            <Clock class="meta-icon" aria-hidden="true" />
             <div class="meta-content">
               <span class="meta-label">Prep Time</span>
               <strong class="meta-value">{recipe.prepTime} min</strong>
             </div>
           </div>
           <div class="meta-item">
-            <span class="meta-icon">♨</span>
+            <Flame class="meta-icon" aria-hidden="true" />
             <div class="meta-content">
               <span class="meta-label">Cook Time</span>
               <strong class="meta-value">{recipe.cookTime} min</strong>
             </div>
           </div>
           <div class="meta-item">
-            <span class="meta-icon">♧</span>
+            <Users class="meta-icon" aria-hidden="true" />
             <div class="meta-content">
               <span class="meta-label">Servings</span>
               <strong class="meta-value">{recipe.servings}</strong>
             </div>
           </div>
           <div class="meta-item">
-            <span class="meta-icon">☆</span>
+            <Star class="meta-icon" aria-hidden="true" />
             <div class="meta-content">
               <span class="meta-label">Difficulty</span>
               <strong class="meta-value">{recipe.difficulty}</strong>
@@ -174,7 +195,7 @@ const structured = {
           </div>
           {recipe.nutrition?.calories !== undefined && (
             <div class="meta-item">
-              <span class="meta-icon">⚡</span>
+              <Zap class="meta-icon" aria-hidden="true" />
               <div class="meta-content">
                 <span class="meta-label">Calories</span>
                 <strong class="meta-value">{recipe.nutrition.calories} kcal</strong>
@@ -185,7 +206,7 @@ const structured = {
 
         {recipe.nutrition && (recipe.nutrition.protein !== undefined || recipe.nutrition.carbs !== undefined || recipe.nutrition.fat !== undefined || recipe.nutrition.fiber !== undefined) && (
           <div class="nutrition-strip">
-            <span class="nutrition-label">Nutrition:</span>
+            <span class="nutrition-label">Nutrition</span>
             <div class="nutrition-items">
               {recipe.nutrition.carbs !== undefined && (
                 <div class="nutrition-pill">
@@ -255,13 +276,13 @@ const structured = {
         </div>
 
         <section class="steps">
-          <h2>How to make {recipe.title}</h2>
-          {recipe.steps.map((s, i) => (
+          <h2>How to Make {shortTitle}</h2>
+          {displaySteps.map((s, i) => (
             <div class="step">
               <div class="step-num">{i + 1}</div>
               <div class="step-body">
                 <div class="step-content">
-                  <h3>{s.title}</h3>
+                  <h3>{s.title}{s.optional && <span class="step-optional">Optional</span>}</h3>
                   <p>{s.text}</p>
                 </div>
                 {s.image && (
@@ -277,14 +298,14 @@ const structured = {
         {((recipe.tips?.length ?? 0) > 0 || (recipe.serveWith?.length ?? 0) > 0) && (
           <div class="post-steps-grid">
             {(recipe.tips?.length ?? 0) > 0 && (
-              <div class="panel panel-warm" style="margin-bottom:0">
-                <h2>💡 Pro Tips</h2>
+              <div class="panel panel-warm">
+                <h2><Lightbulb aria-hidden="true" />Pro Tips</h2>
                 <ul>{recipe.tips?.map((t) => <li>{t}</li>)}</ul>
               </div>
             )}
             {(recipe.serveWith?.length ?? 0) > 0 && (
-              <div class="panel" style="margin-bottom:0">
-                <h2>🍽️ Serve with</h2>
+              <div class="panel">
+                <h2><Utensils aria-hidden="true" />Serve with</h2>
                 <p>{recipe.serveWith?.join(' · ')}</p>
               </div>
             )}
@@ -341,6 +362,10 @@ const structured = {
 
   <script define:vars={{ slug: recipe.slug, base: recipe.servings }}>
     const output = document.querySelector('#servings');
+    // Servings are shown as decimals (2.5), unlike ingredient quantities which use fractions.
+    function formatServings(n) {
+      return String(Number(n.toFixed(2)));
+    }
     function formatQty(n) {
       const whole = Math.floor(n);
       const frac = n - whole;
@@ -352,7 +377,7 @@ const structured = {
       return String(Number(n.toFixed(2)));
     }
     function setScale(scale) {
-      output.textContent = formatQty(base * scale);
+      output.textContent = formatServings(base * scale);
       document.querySelectorAll('.qty').forEach((el) => {
         el.textContent = el.dataset.amount === '' ? '' : formatQty(Number(el.dataset.amount) * scale);
       });
@@ -367,12 +392,17 @@ const structured = {
     });
     const saved = JSON.parse(localStorage.getItem('jyo-saved') || '[]');
     const save = document.querySelector('#save');
-    save.textContent = saved.includes(slug) ? '♥ Saved' : '♡ Save';
+    const saveLabel = document.querySelector('#save-label');
+    function showSaved(isSaved) {
+      save.setAttribute('aria-pressed', String(isSaved));
+      saveLabel.textContent = isSaved ? 'Saved' : 'Save';
+    }
+    showSaved(saved.includes(slug));
     save.onclick = () => {
       let arr = JSON.parse(localStorage.getItem('jyo-saved') || '[]');
       arr = arr.includes(slug) ? arr.filter((x) => x !== slug) : [...arr, slug];
       localStorage.setItem('jyo-saved', JSON.stringify(arr));
-      save.textContent = arr.includes(slug) ? '♥ Saved' : '♡ Save';
+      showSaved(arr.includes(slug));
     };
     document.querySelector('#share').onclick = async () => {
       if (navigator.share) {
