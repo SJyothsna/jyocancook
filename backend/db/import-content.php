@@ -149,6 +149,12 @@ function importContent(PDO $pdo, string $configDir, string $recipesDir, array $o
     }
 
     // ---- Recipes: category/tag links, ingredients and steps are written by RecipeService
+    // Diets first: a recipe may only use a diet from the list (config/diets.json), and the list is only
+    // seeded while the diets table is empty.
+    if (!$dryRun) {
+        importDiets($pdo, $configDir);
+    }
+
     $service = new RecipeService($pdo);
     $recipeExists = $pdo->prepare('SELECT COUNT(*) FROM `recipes` WHERE `slug` = :slug');
     $dbCategories = $pdo->query('SELECT `slug` FROM `categories`')->fetchAll(PDO::FETCH_COLUMN);

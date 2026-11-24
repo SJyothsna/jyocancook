@@ -217,7 +217,7 @@ if (isUpdate) {
     return r.stdout;
   };
   const listed = git('ls-tree', '-r', '--name-only', seedRef, '--', 'config', 'src/content/recipes').toString('utf8').split('\n').filter(Boolean);
-  const wanted = listed.filter((f) => /^config\/(categories|subcategories|tags|menu)\.json$/.test(f) || /^src\/content\/recipes\/[^/]+\.json$/.test(f));
+  const wanted = listed.filter((f) => /^config\/(categories|subcategories|diets|tags|menu)\.json$/.test(f) || /^src\/content\/recipes\/[^/]+\.json$/.test(f));
   if (!wanted.some((f) => f.startsWith('src/content/recipes/'))) seedFail(`Seed ref "${seedRef}" has no recipes in src/content/recipes`);
   if (!wanted.includes('config/categories.json')) seedFail(`Seed ref "${seedRef}" has no config/categories.json`);
   for (const file of wanted) {

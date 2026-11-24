@@ -230,7 +230,7 @@ describe('production package (fake Astro build, real packager)', () => {
     assert.ok(!fs.existsSync(path.join(backendRoot, 'tmp/logs')), 'no logs shipped');
   });
 
-  it('seeds the backend with exactly the content committed on the current branch (HEAD): 8 recipes, 8 categories, 14 tags, 11 menu items, 41 ingredients, 24 steps', () => {
+  it('seeds the backend with exactly the content committed on the current branch (HEAD): 11 recipes, 9 categories, 14 tags, 12 menu items, 47 ingredients, 27 steps', () => {
     const branchRecipes = git('ls-tree', '--name-only', 'HEAD', 'src/content/recipes/')
       .split('\n')
       .filter((f) => f.endsWith('.json'))
@@ -249,13 +249,13 @@ describe('production package (fake Astro build, real packager)', () => {
       ingredients += r.ingredients.length;
       steps += r.steps.length;
     }
-    for (const f of ['categories', 'tags', 'menu']) {
+    for (const f of ['categories', 'diets', 'tags', 'menu']) {
       assert.equal(text(backendRoot, `seed/config/${f}.json`), git('show', `HEAD:config/${f}.json`), `${f}.json differs from HEAD`);
     }
     const count = (f: string) => JSON.parse(text(backendRoot, `seed/config/${f}.json`)).length;
     assert.deepEqual(
       { recipes: branchRecipes.length, categories: count('categories'), tags: tagNames.size, menu: count('menu'), ingredients, steps },
-      { recipes: 8, categories: 8, tags: 14, menu: 11, ingredients: 41, steps: 24 },
+      { recipes: 11, categories: 9, tags: 14, menu: 12, ingredients: 47, steps: 27 },
     );
   });
 

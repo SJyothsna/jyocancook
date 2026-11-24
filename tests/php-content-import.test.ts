@@ -37,11 +37,11 @@ const recipes: Recipe[] = recipeFiles.map((f) => {
   r.slug ??= path.basename(f, '.json');
   return r;
 });
-const categories: Array<{ slug: string; name: string }> = JSON.parse(git('show', 'HEAD:config/categories.json'));
+const byOrder = (a: { order?: number }, b: { order?: number }) => (a.order ?? 0) - (b.order ?? 0);\nconst categories: Array<{ slug: string; name: string; order?: number }> = JSON.parse(git('show', 'HEAD:config/categories.json')).sort(byOrder);
 const tagList: string[] = JSON.parse(git('show', 'HEAD:config/tags.json'));
-const menu: Array<{ label: string; visible?: boolean }> = JSON.parse(git('show', 'HEAD:config/menu.json'));
+const menu: Array<{ label: string; visible?: boolean; order?: number }> = JSON.parse(git('show', 'HEAD:config/menu.json')).sort(byOrder);
 const uniqueTags = new Map<string, string>();
-for (const name of [...tagList, ...recipes.flatMap((r) => r.tags ?? [])]) if (!uniqueTags.has(slugify(name))) uniqueTags.set(slugify(name), name);
+for (const name of [...tagList, ...recipes.flatMap((r) => r.tags ?? [])]) if (!uniqueTags.has(slugify(name))) uniqueTags.set(slugify(name), name);\n// What the import is expected to carry over: whatever is committed (the counts follow the content).\nconst N = { categories: categories.length, tags: uniqueTags.size, recipes: recipes.length, menu_items: menu.length };
 
 // ---------------------------------------------------------------- helpers
 
@@ -82,7 +82,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     site = makeSite('imp');
     // The seed exactly as the packager ships it: files read from the committed Hostinger branch.
     const seedDir = path.join(site.dir, 'backend-staging/seed');
-    for (const f of [...recipeFiles, ...['categories', 'tags', 'menu'].map((n) => `config/${n}.json`)]) {
+    for (const f of [...recipeFiles, ...['categories', 'diets', 'tags', 'menu'].map((n) => `config/${n}.json`)]) {
       writeFile(path.join(seedDir, f.replace(/^src\/content\/recipes\//, 'recipes/')), git('show', `HEAD:${f}`));
     }
     fs.writeFileSync(stagingFile('index.html'), '<h1>ASTRO HOME</h1>');
@@ -93,10 +93,10 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
   after(stopPhp);
 
   it('the branch holds the content the import is expected to carry over', () => {
-    assert.equal(recipes.length, 8, 'recipes in branch');
-    assert.equal(categories.length, 8, 'categories in branch');
+    assert.equal(recipes.length, 11, 'recipes in branch');
+    assert.equal(categories.length, 9, 'categories in branch');
     assert.equal(uniqueTags.size, 14, 'unique tags in branch (tags.json plus every tag a recipe uses)');
-    assert.equal(menu.length, 11, 'menu items in branch');
+    assert.equal(menu.length, 12, 'menu items in branch');
   });
 
   it('every image referenced by the branch content exists in the branch (nothing is missing)', () => {
@@ -111,7 +111,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
   it('a dry run reports what would be added and writes nothing', async () => {
     const r = await runImport("['dry_run' => true]");
     assert.deepEqual(r.errors, []);
-    assert.deepEqual(r.created, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
+    assert.deepEqual(r.created, N);
     for (const t of ['recipes', 'categories', 'tags', 'menu_items', 'recipe_tags']) assert.equal(await count(t), 0, t);
   });
 
@@ -119,12 +119,12 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const r = await runImport();
     assert.deepEqual(r.errors, []);
     assert.deepEqual(r.warnings, [], 'no unmapped field, unknown category or other warning');
-    assert.deepEqual(r.source, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
-    assert.deepEqual(r.created, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
-    assert.equal(await count('recipes'), 8);
-    assert.equal(await count('categories'), 8);
-    assert.equal(await count('tags'), 14);
-    assert.equal(await count('menu_items'), 11);
+    assert.deepEqual(r.source, N);
+    assert.deepEqual(r.created, N);
+    assert.equal(await count('recipes'), N.recipes);
+    assert.equal(await count('categories'), N.categories);
+    assert.equal(await count('tags'), N.tags);
+    assert.equal(await count('menu_items'), N.menu_items);
   });
 
   it('stores each recipe with its category, tags, ingredients, steps, flags and exact slug', async () => {
@@ -152,9 +152,9 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const r = await runImport();
     assert.deepEqual(r.errors, []);
     assert.deepEqual(r.created, { categories: 0, tags: 0, recipes: 0, menu_items: 0 });
-    assert.deepEqual(r.skipped, { categories: 8, tags: 14, recipes: 8, menu_items: 11 });
+    assert.deepEqual(r.skipped, N);
     assert.deepEqual(await sql('SELECT id, slug FROM recipes ORDER BY id'), before);
-    for (const [table, n] of [['recipes', 8], ['categories', 8], ['tags', 14], ['menu_items', 11]] as const) assert.equal(await count(table), n, table);
+    for (const [table, n] of Object.entries(N) as Array<[string, number]>) assert.equal(await count(table), n, table);
     assert.equal((await sql('SELECT COUNT(*) AS n FROM (SELECT slug FROM recipes GROUP BY slug HAVING COUNT(*) > 1)'))[0].n, 0);
     assert.equal(await count('recipe_ingredients'), (await sql('SELECT COUNT(*) AS n FROM recipe_ingredients'))[0].n);
   });
@@ -180,10 +180,10 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.equal((await sql('SELECT name FROM categories WHERE slug = ?', ['breakfast']))[0].name, 'Edited Breakfast');
     assert.equal((await sql('SELECT COUNT(*) AS n FROM recipe_tags WHERE recipe_id = ?', [id]))[0].n, 0, 'removed tag links stay removed');
     assert.ok(Number((await sql('SELECT COUNT(*) AS n FROM recipe_ingredients'))[0].n) === ingredientsBefore);
-    assert.equal(await count('menu_items'), 10, 'a menu edited in the admin is not restored');
+    assert.equal(await count('menu_items'), N.menu_items - 1, 'a menu edited in the admin is not restored');
     assert.equal((await sql('SELECT COUNT(*) AS n FROM tags WHERE slug = ?', ['staging-only']))[0].n, 1);
-    assert.equal(await count('tags'), 15);
-    assert.equal(await count('recipes'), 8);
+    assert.equal(await count('tags'), N.tags + 1);
+    assert.equal(await count('recipes'), N.recipes);
 
     // Put the data back for the remaining tests.
     await sql('UPDATE recipes SET title = ?, published = 1, featured = 0 WHERE slug = ?', [recipes.find((x) => x.slug === slug)!.title, slug]);
@@ -205,7 +205,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.equal(r.created.recipes, 0);
     assert.equal(r.errors.length, 1);
     assert.match(r.errors[0], /public URL/);
-    assert.equal(await count('recipes'), 8);
+    assert.equal(await count('recipes'), N.recipes);
   });
 
   it('reports missing images and unknown fields instead of hiding them', async () => {
@@ -243,7 +243,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
 
   it('the menu reports visibility as a real boolean (the admin UI tests !== false)', async () => {
     const data = json(await call(c, 'GET', '/api/admin/menu')).data as Array<{ visible: unknown; order: unknown }>;
-    assert.equal(data.length, 11);
+    assert.equal(data.length, N.menu_items);
     for (const item of data) {
       assert.equal(typeof item.visible, 'boolean');
       assert.equal(typeof item.order, 'number');
@@ -356,7 +356,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.equal(after.steps.length, (original.steps ?? []).length);
     assert.equal(after.published, true);
     assert.match(fs.readFileSync(stagingFile(`recipes/${slug}/index.html`), 'utf8'), /edited on staging/);
-    assert.equal(await count('recipes'), 8, 'no duplicate created');
+    assert.equal(await count('recipes'), N.recipes, 'no duplicate created');
   });
 
   it('the recipe page shows Tbsp with a capital and renders bulleted and numbered instructions as lists', async () => {
@@ -377,6 +377,10 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
 
 
   it('the Diets tab: diets are listed, added, used by recipes, renamed and protected while in use', async () => {
+    // The seed (config/diets.json) already lists Vegan; drop it so the steps below can add it again.
+    const seeded = json(await call(c, 'GET', '/api/admin/diets')).data;
+    assert.deepEqual(seeded.map((d: { name: string }) => d.name), ['Vegetarian', 'Non-Vegetarian', 'Vegan']);
+    assert.equal((await post('/api/admin/diets', { data: seeded.slice(0, 2) })).httpStatusCode, 200);
     const diets = json(await call(c, 'GET', '/api/admin/diets')).data;
     assert.deepEqual(diets.map((d: { name: string }) => d.name), ['Vegetarian', 'Non-Vegetarian']);
 
@@ -430,11 +434,11 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const r = await post('/api/admin/tags', { data: [...all, 'Brand New Tag'] });
     assert.equal(r.httpStatusCode, 200, r.text);
     assert.equal(await count('recipe_tags'), linksBefore, 'links survive a Tags save');
-    assert.equal(await count('tags'), 15);
+    assert.equal(await count('tags'), N.tags + 1);
     const back = await post('/api/admin/tags', { data: all });
     assert.equal(back.httpStatusCode, 200, back.text);
     assert.equal(await count('recipe_tags'), linksBefore);
-    assert.equal(await count('tags'), 14);
+    assert.equal(await count('tags'), N.tags);
   });
 
   it('a re-run after admin edits keeps the edited recipe and its links', async () => {

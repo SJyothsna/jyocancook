@@ -395,9 +395,7 @@ function recipeForm(r: any) {
         )
         .join('')}</div>
     </fieldset>
-    <label>Recipe image<input name="image" id="recipe-image" value="${esc(
-      r?.image || '/images/recipes/andhra-chicken-curry.png',
-    )}"/></label>
+    <label>Recipe image (leave empty to use the placeholder)<input name="image" id="recipe-image" value="${esc(r?.image || '')}" placeholder="Upload a photo below"/></label>
     <label>Upload new recipe photo (JPG, PNG, WebP; max 4 MB)<input type="file" id="photo" accept="image/jpeg,image/png,image/webp"/></label>
     <button class="btn btn-light" type="button" id="upload-photo">Upload photo</button>
     <div class="field-note">Upload before saving the recipe. The photo is stored on the server; it only appears on a public page once the recipe is published.</div>
