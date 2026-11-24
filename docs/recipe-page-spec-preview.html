@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Recipe page: full UI spec preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  /* PREVIEW ONLY. Nothing here is applied to the site. Values follow the UI/UX spec. */
+  :root {
+    --burgundy: #8D1731; --bg: #FFF8F2; --text: #302722; --para: #51443C; --secondary: #76665F;
+    --border: #E8CDBB; --peach: #FFF1E6; --card: #FFFFFF; --footer-bg: #FBF1E7;
+    --f-head: 'Playfair Display', Georgia, serif;
+    --f-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --f-logo: 'Caveat Brush', cursive; /* existing logo wordmark only */
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--f-body); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; }
+  img { max-width: 100%; display: block; }
+  :focus-visible { outline: 3px solid var(--burgundy); outline-offset: 2px; border-radius: 4px; }
+  .topbar :focus-visible { outline-color: #fff; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+  /* Layout */
+  .wrap { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+  @media (max-width: 1024px) { .wrap { padding: 0 24px; } }
+  @media (max-width: 640px) { .wrap { padding: 0 16px; } }
+
+  /* ---------- 2. Header ---------- */
+  .topbar { background: var(--burgundy); color: #fff; }
+  .topline { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 76px; }
+  .logo { display: flex; align-items: center; gap: 8px; width: 180px; flex: none; }
+  .logo img { width: 56px; height: 56px; object-fit: contain; flex: none; }
+  .logo .t { display: flex; flex-direction: column; font-family: var(--f-logo); line-height: 1; }
+  .logo .t b { font-weight: 400; font-size: 1.7rem; }
+  .logo .t small { font-size: 0.8rem; opacity: .9; margin-top: 3px; }
+  .search { flex: 1; max-width: 440px; display: flex; align-items: center; background: #fff; border-radius: 24px; height: 46px; padding: 0 8px 0 20px; }
+  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 400 15px var(--f-body); color: var(--text); }
+  .search input::placeholder { color: var(--secondary); }
+  .search:focus-within { outline: 3px solid #fff; outline-offset: 2px; }
+  .search button { border: 0; background: transparent; color: var(--burgundy); display: flex; width: 40px; height: 40px; align-items: center; justify-content: center; }
+  .myrec { display: inline-flex; align-items: center; gap: 6px; color: #fff; font: 600 15px var(--f-body); min-height: 44px; }
+  .myrec svg { width: 20px; height: 20px; }
+  @media (max-width: 700px) {
+    .topline { flex-wrap: wrap; min-height: 0; padding: 10px 0 12px; row-gap: 10px; }
+    .search { order: 3; max-width: none; flex: 1 1 100%; }
+    .search input { font-size: 14px; }
+    .logo { width: auto; }
+  }
+
+  /* ---------- 3. Navigation ---------- */
+  .nav-shell { background: var(--bg); border-bottom: 1px solid var(--border); }
+  .nav { display: flex; align-items: stretch; gap: 26px; height: 50px; }
+  .nav a { display: inline-flex; align-items: center; font: 500 14px var(--f-body); color: var(--text); border-bottom: 3px solid transparent; white-space: nowrap; }
+  .nav a:hover { color: var(--burgundy); }
+  .nav a.active { color: var(--burgundy); font-weight: 600; border-bottom-color: var(--burgundy); }
+  .nav-toggle { display: none; }
+  @media (max-width: 900px) {
+    .nav-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; background: transparent; border: 0; font: 600 14px var(--f-body); color: var(--text); }
+    .nav { display: none; flex-direction: column; height: auto; gap: 0; padding-bottom: 8px; }
+    .nav.open { display: flex; }
+    .nav a { min-height: 44px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; padding-left: 8px; }
+    .nav a.active { border-bottom-color: var(--border); border-left-color: var(--burgundy); }
+  }
+
+  /* ---------- 4. Breadcrumb ---------- */
+  .breadcrumb { font-size: 13px; line-height: 1.5; color: var(--secondary); margin: 22px 0 20px; }
+  .breadcrumb a { color: var(--burgundy); }
+  .breadcrumb a:hover { text-decoration: underline; }
+  @media (max-width: 640px) { .breadcrumb { font-size: 12px; } }
+
+  /* ---------- 5-8. Title block ---------- */
+  .title-block { max-width: 1000px; }
+  h1 { font: 700 36px/1.2 var(--f-head); letter-spacing: -0.02em; color: var(--burgundy); margin: 0 0 12px; }
+  @media (max-width: 1024px) { h1 { font-size: 32px; } }
+  @media (max-width: 640px) { h1 { font-size: 28px; } }
+  .intro { font-size: 16px; line-height: 1.7; color: var(--para); max-width: 700px; margin: 0 0 18px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .badge { font: 600 12px/1.4 var(--f-body); color: var(--burgundy); background: var(--peach); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border: 1px solid var(--burgundy); border-radius: 10px; background: transparent; color: var(--burgundy); font: 600 14px var(--f-body); transition: background-color .15s, color .15s; }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn:hover { background: var(--burgundy); color: #fff; }
+  .btn[aria-pressed="true"] { background: var(--burgundy); color: #fff; }
+  .btn[aria-pressed="true"] svg { fill: currentColor; }
+
+  /* ---------- 24. Page grid ---------- */
+  .page { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: start; }
+  .main { max-width: 800px; min-width: 0; }
+  @media (max-width: 1024px) { .page { grid-template-columns: 1fr; gap: 36px; } .main { max-width: none; } }
+
+  /* ---------- 9. Image ---------- */
+  .hero-img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; background: var(--peach); margin-bottom: 24px; }
+
+  /* ---------- 11. Info cards ---------- */
+  .info { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
+  .info > div { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 10px 12px; background: var(--peach); border: 1px solid var(--border); border-radius: 8px; }
+  .info svg { width: 18px; height: 18px; color: var(--burgundy); flex: none; }
+  .info .l { display: block; font: 600 11px/1.3 var(--f-body); letter-spacing: .04em; text-transform: uppercase; color: var(--secondary); }
+  .info .v { display: block; font: 700 16px/1.3 var(--f-body); color: var(--text); white-space: nowrap; }
+  @media (max-width: 760px) { .info { grid-template-columns: repeat(2, 1fr); } .info > div:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+
+  /* ---------- 12. Nutrition ---------- */
+  .nutrition { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 28px; }
+  .nutrition .nl { font: 700 12px var(--f-body); letter-spacing: .04em; text-transform: uppercase; color: var(--secondary); margin-right: 2px; }
+  .npill { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 6px 12px; font: 500 13px/1.3 var(--f-body); color: var(--text); }
+  .npill b { font-weight: 700; }
+
+  /* ---------- 13. Story ---------- */
+  .story { border-left: 4px solid var(--burgundy); padding: 14px 0 14px 20px; margin: 0 0 28px; }
+  .story .sl { font: 700 12px var(--f-body); letter-spacing: .05em; text-transform: uppercase; color: var(--burgundy); margin: 0 0 10px; }
+  .story p { margin: 0; font: 400 15px/1.75 var(--f-body); font-style: normal; color: var(--para); }
+
+  /* ---------- 14-16. Ingredients ---------- */
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+  @media (max-width: 640px) { .card { padding: 16px; } }
+  h2 { font: 700 26px/1.25 var(--f-head); color: var(--burgundy); margin: 0; }
+  @media (max-width: 640px) { h2 { font-size: 23px; } }
+  .ing-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  .serv { display: flex; align-items: center; gap: 10px; font: 500 14px var(--f-body); color: var(--text); }
+  .serv b { font-weight: 700; }
+  .scale { display: flex; gap: 6px; }
+  .scale button { min-width: 44px; height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; color: var(--burgundy); font: 600 13px var(--f-body); }
+  .scale button[aria-pressed="true"] { background: var(--burgundy); border-color: var(--burgundy); color: #fff; }
+  h3.group { font: 700 15px/1.4 var(--f-body); color: var(--burgundy); margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .ing-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
+  @media (max-width: 640px) { .ing-grid { grid-template-columns: 1fr; } }
+  .ing { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 0; border-bottom: 1px solid var(--border); font: 400 15px/1.6 var(--f-body); color: var(--text); cursor: pointer; }
+  .ing input { appearance: none; -webkit-appearance: none; flex: none; width: 20px; height: 20px; margin: 0; border: 1.5px solid #8a7467; border-radius: 4px; background: #fff; display: grid; place-content: center; cursor: pointer; }
+  .ing input:checked { background: var(--burgundy); border-color: var(--burgundy); }
+  .ing input:checked::after { content: ''; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+  .ing:has(input:checked) span { text-decoration: line-through; text-decoration-thickness: 1px; opacity: .72; }
+
+  /* ---------- 17-21. Instructions ---------- */
+  .steps { margin-top: 36px; }
+  .steps h2 { font-size: 28px; line-height: 1.3; margin-bottom: 22px; }
+  @media (max-width: 1024px) { .steps h2 { font-size: 26px; } }
+  @media (max-width: 640px) { .steps h2 { font-size: 24px; } }
+  .step { display: flex; gap: 16px; margin-bottom: 26px; }
+  .num { width: 36px; height: 36px; border-radius: 50%; background: var(--burgundy); color: #fff; font: 700 15px var(--f-body); display: flex; align-items: center; justify-content: center; flex: none; }
+  @media (max-width: 640px) { .num { width: 34px; height: 34px; } }
+  .step h3 { font: 700 17px/1.45 var(--f-body); color: var(--burgundy); margin: 4px 0 6px; }
+  @media (max-width: 640px) { .step h3 { font-size: 16px; } }
+  .step p { margin: 0; font: 400 16px/1.8 var(--f-body); color: var(--text); max-width: 680px; }
+  .opt { display: inline-block; vertical-align: middle; margin-left: 8px; font: 600 11px/1.4 var(--f-body); letter-spacing: .03em; text-transform: uppercase; color: var(--burgundy); background: var(--peach); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
+  .note { margin: 4px 0 0 52px; max-width: 680px; }
+  .note .nl2 { font: 700 12px var(--f-body); letter-spacing: .05em; text-transform: uppercase; color: var(--secondary); margin-bottom: 4px; }
+  .note p { margin: 0; font: 400 16px/1.8 var(--f-body); color: var(--text); }
+  @media (max-width: 640px) { .note { margin-left: 0; } }
+
+  /* ---------- 22. Serve with ---------- */
+  .serve { margin-top: 32px; padding: 22px 24px; border-radius: 14px; }
+  .serve h2 { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .serve h2 svg { width: 24px; height: 24px; color: var(--burgundy); flex: none; }
+  .serve p { margin: 0; font: 400 16px/1.7 var(--f-body); color: var(--text); }
+  .serve a:hover { text-decoration: underline; }
+
+  /* ---------- 10. Sidebar ---------- */
+  .side { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+  .side h2 { font-size: 25px; margin-bottom: 18px; }
+  @media (max-width: 640px) { .side h2 { font-size: 23px; } .side { padding: 20px 16px; } }
+  .side-list { display: flex; flex-direction: column; gap: 16px; }
+  .side-item { display: flex; gap: 14px; align-items: flex-start; border-radius: 8px; }
+  .side-item:hover h3 { text-decoration: underline; }
+  .side-item img { width: 64px; height: 64px; flex: none; border-radius: 8px; object-fit: cover; }
+  .side-item h3 { font: 600 14px/1.45 var(--f-body); color: var(--text); margin: 0 0 2px; }
+  .side-item small { font: 400 12px/1.5 var(--f-body); color: var(--secondary); }
+  @media (max-width: 1024px) { .side-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
+
+  /* ---------- 23. Footer ---------- */
+  .footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 42px 0; margin-top: 60px; }
+  .footer-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; }
+  .footer .flogo { display: flex; align-items: center; gap: 8px; font: 400 1.9rem var(--f-logo); color: var(--burgundy); line-height: 1; }
+  .footer .flogo img { width: 44px; height: 44px; object-fit: contain; }
+  .footer p { margin: 6px 0 0; font: 400 14px/1.6 var(--f-body); color: var(--secondary); }
+  .footer nav { font: 500 14px var(--f-body); color: var(--burgundy); }
+  .footer nav a { padding: 10px 0; display: inline-block; }
+  .footer nav a:hover { text-decoration: underline; }
+  .footer small { font: 400 12px var(--f-body); color: var(--secondary); }
+  @media (max-width: 640px) { .footer { padding: 28px 0; margin-top: 40px; } .footer-in { flex-direction: column; align-items: flex-start; gap: 14px; } }
+</style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="wrap topline">
+        <a class="logo" href="#" aria-label="JyoCanCook - Home">
+          <img src="../public/images/logo.png" alt="" width="56" height="56" />
+          <span class="t"><b>JyoCanCook</b><small>Homemade Recipes</small></span>
+        </a>
+        <form class="search" role="search" onsubmit="return false">
+          <input aria-label="Search recipes, ingredients, or tags" placeholder="Search recipes, ingredients, or tags..." />
+          <button type="submit" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+        </form>
+        <a class="myrec" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/></svg>
+          My Recipes
+        </a>
+      </div>
+    </div>
+    <div class="nav-shell">
+      <div class="wrap">
+        <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="nav">
+          <span>Browse categories</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <nav class="nav" id="nav" aria-label="Main navigation">
+          <a href="#">Home</a><a href="#">Recipes</a><a href="#">Breakfast</a><a href="#">Rice &amp; Biryani</a>
+          <a href="#" class="active" aria-current="page">Curries</a><a href="#">Chutneys</a><a href="#">Snacks</a>
+          <a href="#">Sweets</a><a href="#">Vegetarian</a><a href="#">Non-Vegetarian</a><a href="#">About</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="breadcrumb"><a href="#">Home</a> › <a href="#">Curries</a> › Homemade Sambar Recipe with Toor Dal and Vegetables</div>
+
+    <div class="title-block">
+      <h1>Homemade Sambar Recipe with Toor Dal and Vegetables</h1>
+      <p class="intro">A comforting South Indian lentil stew made with toor dal, tamarind and fresh vegetables, finished with a fragrant tempering. Serve it hot with rice, idli or dosa.</p>
+      <div class="badges"><a class="badge" href="#">Curries</a><a class="badge" href="#">South Indian</a><a class="badge" href="#">Vegetarian</a></div>
+      <div class="actions">
+        <button class="btn" id="save" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/></svg>
+          <span id="saveLabel">Save</span>
+        </button>
+        <button class="btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>Share
+        </button>
+        <button class="btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg>Print
+        </button>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="main">
+        <img class="hero-img" src="../public/images/recipes/masala-dosa.png" alt="Homemade sambar served in a bowl" width="800" height="600" />
+
+        <div class="info">
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span><span class="l">Prep time</span><span class="v">15 min</span></span></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s5 4 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-8z"/></svg><span><span class="l">Cook time</span><span class="v">45 min</span></span></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 4.500a3.500 3.500 0 0 1 0 7M21 20a6 6 0 0 0-4-5.600"/></svg><span><span class="l">Servings</span><span class="v" id="servTop">4</span></span></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.800 5.700 6.200.9-4.500 4.400 1.100 6.200L12 17.200 6.400 20.200l1.100-6.200L3 9.600l6.200-.9z"/></svg><span><span class="l">Difficulty</span><span class="v">Medium</span></span></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg><span><span class="l">Calories</span><span class="v">180 kcal</span></span></div>
+        </div>
+
+        <div class="nutrition">
+          <span class="nl">Nutrition (per serving)</span>
+          <span class="npill">Carbs <b>24 g</b></span><span class="npill">Protein <b>9 g</b></span>
+          <span class="npill">Fiber <b>7 g</b></span><span class="npill">Fat <b>5 g</b></span>
+        </div>
+
+        <section class="story" aria-labelledby="storyLabel">
+          <p class="sl" id="storyLabel">Story &amp; background</p>
+          <p>Sambar is the dish that turns a plain plate of rice into a proper meal in our home. This is the version I grew up eating: toor dal cooked until creamy, a tangy tamarind base and whatever vegetables the market had that morning.</p>
+        </section>
+
+        <section class="card" aria-labelledby="ingH">
+          <div class="ing-head">
+            <h2 id="ingH">Ingredients</h2>
+            <div class="serv">
+              <span>Servings: <b id="servings">4</b></span>
+              <div class="scale" role="group" aria-label="Scale recipe">
+                <button type="button" data-scale="0.5" aria-pressed="false">0.5x</button>
+                <button type="button" data-scale="1" aria-pressed="true">1x</button>
+                <button type="button" data-scale="2" aria-pressed="false">2x</button>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="group" style="margin-top:14px">For cooking the dal</h3>
+          <div class="ing-grid">
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="0.5">½</span> cup Toor dal</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="0.25">¼</span> tsp Turmeric powder</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="2">2</span> cups Water</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="1">1</span> tsp Oil</span></label>
+          </div>
+
+          <h3 class="group">For tamarind juice</h3>
+          <div class="ing-grid">
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="1">1</span> lemon-sized ball Tamarind</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="1">1</span> cup Warm water</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="2">2</span> Tomatoes</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="2">2</span> tbsp Sambar powder</span></label>
+          </div>
+
+          <h3 class="group">For the tempering</h3>
+          <div class="ing-grid">
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="1">1</span> tbsp Ghee</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="1">1</span> tsp Mustard seeds</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="2">2</span> Dried red chillies</span></label>
+            <label class="ing"><input type="checkbox" /><span><span class="q" data-a="1">1</span> sprig Curry leaves</span></label>
+          </div>
+        </section>
+
+        <section class="steps" aria-labelledby="stepsH">
+          <h2 id="stepsH">How to Make Homemade Sambar</h2>
+          <div class="step"><div class="num" aria-hidden="true">1</div><div>
+            <h3>Pressure Cook the Dal</h3>
+            <p>Rinse the toor dal and pressure cook it with water, turmeric and a little oil for 4 whistles, until it is completely soft.</p>
+          </div></div>
+          <div class="step"><div class="num" aria-hidden="true">2</div><div>
+            <h3>Prepare the Tamarind Juice and Vegetables</h3>
+            <p>Soak the tamarind in warm water for 10 minutes, then squeeze out the juice. Chop the vegetables into evenly sized pieces so they cook at the same pace.</p>
+          </div></div>
+          <div class="step"><div class="num" aria-hidden="true">3</div><div>
+            <h3>Add Vegetables and Cook the Sambar <span class="opt">Optional: extra vegetables</span></h3>
+            <p>Boil the tamarind juice with the tomatoes and sambar powder for 8 minutes. Add the vegetables and simmer until tender, then stir in the mashed dal.</p>
+          </div></div>
+          <div class="step"><div class="num" aria-hidden="true">4</div><div>
+            <h3>Prepare the Tempering</h3>
+            <p>Heat the ghee, splutter the mustard seeds, then add the dried chillies and curry leaves. Pour the tempering over the sambar and cover for 2 minutes.</p>
+          </div></div>
+          <div class="note"><div class="nl2">Tip</div><p>Sambar thickens as it rests. Add a splash of hot water when reheating.</p></div>
+        </section>
+
+        <section class="card serve" aria-labelledby="serveH">
+          <h2 id="serveH">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2.500 1.500-3.500 5-3.500 8H17"/></svg>
+            Serve with
+          </h2>
+          <p>steamed rice · idli · dosa · vada</p>
+        </section>
+      </div>
+
+      <aside class="side" aria-labelledby="sideH">
+        <h2 id="sideH">You Might Also Like</h2>
+        <div class="side-list">
+          <a class="side-item" href="#"><img src="../public/images/recipes/coconut-chutney.png" alt="" width="64" height="64" /><div><h3>Coconut Chutney for Idli and Dosa</h3><small>Chutneys · 10 min</small></div></a>
+          <a class="side-item" href="#"><img src="../public/images/recipes/vegetable-pulao.png" alt="" width="64" height="64" /><div><h3>Vegetable Pulao</h3><small>Rice &amp; Biryani · 40 min</small></div></a>
+          <a class="side-item" href="#"><img src="../public/images/recipes/andhra-chicken-curry.png" alt="" width="64" height="64" /><div><h3>Andhra Chicken Curry</h3><small>Curries · 60 min</small></div></a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-in">
+      <div>
+        <div class="flogo"><img src="../public/images/logo.png" alt="" width="44" height="44" />JyoCanCook</div>
+        <p>Made with love, shared with joy. Discover authentic Indian dishes.</p>
+      </div>
+      <nav aria-label="Footer"><a href="#">All Recipes</a> · <a href="#">About</a> · <a href="#">Search</a></nav>
+      <small>© 2026 JyoCanCook. All rights reserved.</small>
+    </div>
+  </footer>
+
+  <script>
+    // Preview interactions only: nav toggle, save state, serving scale, quantity formatting.
+    var navBtn = document.getElementById('navToggle'), nav = document.getElementById('nav');
+    navBtn.addEventListener('click', function () { var o = nav.classList.toggle('open'); navBtn.setAttribute('aria-expanded', String(o)); });
+    var save = document.getElementById('save');
+    save.addEventListener('click', function () { var on = save.getAttribute('aria-pressed') !== 'true'; save.setAttribute('aria-pressed', String(on)); document.getElementById('saveLabel').textContent = on ? 'Saved' : 'Save'; });
+    function fmt(n) {
+      var w = Math.floor(n), f = n - w, fr = [[.125,'⅛'],[.25,'¼'],[.333,'⅓'],[.5,'½'],[.667,'⅔'],[.75,'¾']];
+      if (f < .02) return String(w);
+      var h = fr.filter(function (x) { return Math.abs(f - x[0]) < .02; })[0];
+      return h ? (w ? w + ' ' : '') + h[1] : String(Number(n.toFixed(2)));
+    }
+    document.querySelectorAll('.scale button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var s = Number(b.dataset.scale);
+        document.querySelectorAll('.scale button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        document.getElementById('servings').textContent = fmt(4 * s);
+        document.getElementById('servTop').textContent = fmt(4 * s);
+        document.querySelectorAll('.q').forEach(function (q) { q.textContent = fmt(Number(q.dataset.a) * s); });
+      });
+    });
+  </script>
+</body>
+</html>

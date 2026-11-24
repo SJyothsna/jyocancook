@@ -1,0 +1,50 @@
+{
+  "slug": "sweet-pongal-with-jaggery-sakkarai-pongal",
+  "title": "Sweet Pongal with Jaggery (Sakkarai Pongal)",
+  "description": "",
+  "category": "sweets",
+  "subcategories": [
+    "vegetarian"
+  ],
+  "tags": [],
+  "diet": "Vegetarian",
+  "prepTime": 15,
+  "cookTime": 30,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/recipe-placeholder.svg",
+  "published": true,
+  "featured": false,
+  "story": "Sweet Pongal is a traditional South Indian sweet made with rice, moong dal, jaggery and ghee. It is commonly prepared during festivals and special occasions. This recipe is made in a regular cooking pot, without a pressure cooker or rice cooker.",
+  "ingredients": [
+    {
+      "amount": 0.5,
+      "unit": "cup",
+      "name": "Raw Rice"
+    },
+    {
+      "amount": 0.25,
+      "unit": "cup",
+      "name": "Moong Dal"
+    },
+    {
+      "amount": 1,
+      "unit": "cup",
+      "name": "Milk"
+    },
+    {
+      "amount": 1.5,
+      "unit": "cup",
+      "name": "water"
+    }
+  ],
+  "steps": [
+    {
+      "title": "cooking",
+      "text": "cook all together"
+    }
+  ],
+  "tips": [],
+  "serveWith": [],
+  "publishedAt": "2026-11-20T20:56:31.402Z"
+}

@@ -4,7 +4,6 @@
   "description": "A spicy and flavourful Andhra-style chicken curry with onions, tomatoes and aromatic spices.",
   "category": "curries",
   "subcategories": [
-    "curries",
     "non-vegetarian"
   ],
   "tags": [
@@ -13,7 +12,7 @@
     "Spicy",
     "Dinner"
   ],
-  "diet": "Non-Vegetarian",
+  "diet": "Vegan",
   "prepTime": 20,
   "cookTime": 40,
   "servings": 4,

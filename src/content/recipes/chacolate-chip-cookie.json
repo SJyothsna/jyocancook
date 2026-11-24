@@ -1,0 +1,34 @@
+{
+  "slug": "chacolate-chip-cookie",
+  "title": "chacolate chip cookie",
+  "description": "asas",
+  "category": "baking",
+  "subcategories": [
+    "cookies"
+  ],
+  "tags": [],
+  "diet": "Vegetarian",
+  "prepTime": 15,
+  "cookTime": 30,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/recipe-placeholder.svg",
+  "published": true,
+  "featured": false,
+  "ingredients": [
+    {
+      "amount": null,
+      "unit": "",
+      "name": "qq"
+    }
+  ],
+  "steps": [
+    {
+      "title": "qqq",
+      "text": "qqq"
+    }
+  ],
+  "tips": [],
+  "serveWith": [],
+  "publishedAt": "2026-11-24T18:54:34.947Z"
+}

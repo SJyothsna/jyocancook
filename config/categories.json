@@ -5,7 +5,7 @@
     "description": "Start your day with something delicious",
     "image": "/images/categories/breakfast.svg",
     "order": 1,
-    "subcategories": ["vegetarian", "non-vegetarian"]
+    "subcategories": []
   },
   {
     "slug": "rice-biryani",
@@ -13,7 +13,7 @@
     "description": "Fragrant rice favourites",
     "image": "/images/categories/rice-biryani.svg",
     "order": 2,
-    "subcategories": ["vegetarian", "non-vegetarian"]
+    "subcategories": []
   },
   {
     "slug": "curries",
@@ -21,7 +21,7 @@
     "description": "Comforting curries and gravies",
     "image": "/images/categories/curries.svg",
     "order": 3,
-    "subcategories": ["vegetarian", "non-vegetarian"]
+    "subcategories": []
   },
   {
     "slug": "chutneys",
@@ -29,7 +29,7 @@
     "description": "Fresh, spicy sides",
     "image": "/images/categories/chutneys.svg",
     "order": 4,
-    "subcategories": ["vegetarian", "non-vegetarian"]
+    "subcategories": []
   },
   {
     "slug": "snacks",
@@ -37,7 +37,7 @@
     "description": "Tea-time bites and more",
     "image": "/images/categories/snacks.svg",
     "order": 5,
-    "subcategories": ["vegetarian", "non-vegetarian"]
+    "subcategories": []
   },
   {
     "slug": "sweets",
@@ -45,20 +45,33 @@
     "description": "Desserts for every occasion",
     "image": "/images/categories/sweets.svg",
     "order": 6,
-    "subcategories": ["vegetarian", "non-vegetarian"]
+    "subcategories": []
   },
   {
     "slug": "vegetarian",
     "name": "Vegetarian",
     "description": "Plant-based homestyle cooking",
     "image": "/images/categories/vegetarian.svg",
-    "order": 7
+    "order": 7,
+    "subcategories": []
   },
   {
     "slug": "non-vegetarian",
     "name": "Non-Vegetarian",
     "description": "Chicken, fish and meat favourites",
     "image": "/images/categories/non-vegetarian.svg",
-    "order": 8
+    "order": 8,
+    "subcategories": []
+  },
+  {
+    "slug": "baking",
+    "name": "Baking",
+    "description": "over based recipes",
+    "image": "/images/categories/baking.svg",
+    "order": 0,
+    "subcategories": [
+      "cookies",
+      "cakes"
+    ]
   }
 ]

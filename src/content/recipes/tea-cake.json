@@ -1,0 +1,34 @@
+{
+  "slug": "tea-cake",
+  "title": "Tea cake",
+  "description": "",
+  "category": "baking",
+  "subcategories": [
+    "cakes"
+  ],
+  "tags": [],
+  "diet": "Non-Vegetarian",
+  "prepTime": 15,
+  "cookTime": 30,
+  "servings": 4,
+  "difficulty": "Easy",
+  "image": "/images/recipes/recipe-placeholder.svg",
+  "published": true,
+  "featured": false,
+  "ingredients": [
+    {
+      "amount": null,
+      "unit": "",
+      "name": "ddd"
+    }
+  ],
+  "steps": [
+    {
+      "title": "ddd",
+      "text": "ddd"
+    }
+  ],
+  "tips": [],
+  "serveWith": [],
+  "publishedAt": "2026-11-24T18:54:30.268Z"
+}

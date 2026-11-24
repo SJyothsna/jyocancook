@@ -1,4 +1,12 @@
 [
-  { "slug": "vegetarian", "name": "Vegetarian", "order": 1 },
-  { "slug": "non-vegetarian", "name": "Non-Vegetarian", "order": 2 }
+  {
+    "slug": "cookies",
+    "name": "Cookies",
+    "order": 0
+  },
+  {
+    "slug": "cakes",
+    "name": "Cakes",
+    "order": 1
+  }
 ]

@@ -6,13 +6,13 @@
     "visible": true
   },
   {
-    "label": "Recipes",
+    "label": "RECIPES",
     "href": "/recipes/",
     "order": 2,
     "visible": true
   },
   {
-    "label": "Breakfast",
+    "label": "BREAKFAST",
     "href": "/category/breakfast/",
     "order": 3,
     "visible": true
@@ -24,25 +24,25 @@
     "visible": true
   },
   {
-    "label": "Curries",
+    "label": "CURRIES",
     "href": "/category/curries/",
     "order": 5,
     "visible": true
   },
   {
-    "label": "Chutneys",
+    "label": "CHUTNEYS",
     "href": "/category/chutneys/",
     "order": 6,
     "visible": true
   },
   {
-    "label": "Snacks",
+    "label": "SNACKS",
     "href": "/category/snacks/",
     "order": 7,
     "visible": true
   },
   {
-    "label": "Sweets",
+    "label": "SWEETS",
     "href": "/category/sweets/",
     "order": 8,
     "visible": true
@@ -60,9 +60,15 @@
     "visible": true
   },
   {
+    "label": "BAKING",
+    "href": "/category/baking/",
+    "order": 11,
+    "visible": true
+  },
+  {
     "label": "About",
     "href": "/about/",
-    "order": 11,
+    "order": 12,
     "visible": true
   }
 ]

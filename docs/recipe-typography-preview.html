@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Recipe page typography preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+<style>
+  /* Preview only. Nothing here is applied to the site yet. */
+  :root {
+    --primary: #8b1e2d; --cream: #fff8f1; --card-bg: #fff1e6; --line: #eed7c4;
+    --ink: #2d2d2d; --white: #fff;
+  }
+
+  /* ---------- Variant definitions ---------- */
+  body[data-v="current"] {
+    --f-head: 'Playfair Display', Georgia, serif;
+    --f-body: 'Poppins', system-ui, sans-serif;
+    --f-h3: 'Poppins', system-ui, sans-serif;
+    --h1: 2.6rem;  --h1-lh: 1.2;   --h1-ls: -0.01em;
+    --intro: 1.125rem; --intro-lh: 1.6; --muted: #6b7280;
+    --h2: 2rem;    --h2-side: 2rem;
+    --h3: 1.1rem;  --h3-color: #8b1e2d; --h3-w: 600;
+    --body: 1rem;  --body-lh: 1.6; --step: 1rem; --step-lh: 1.6; --measure: none;
+    --label: 0.72rem; --label-ls: 0.03em; --label-w: 400;
+    --meta-val: 0.92rem; --ing: 0.875rem; --pill: 0.75rem; --crumb: 0.875rem;
+    --side-title: 0.95rem; --story-style: italic;
+  }
+  body[data-v="a"] {
+    --f-head: 'Playfair Display', Georgia, serif;
+    --f-body: 'Inter', system-ui, sans-serif;
+    --f-h3: 'Inter', system-ui, sans-serif;
+    --h1: 2.5rem;  --h1-lh: 1.15;  --h1-ls: -0.015em;
+    --intro: 1.1875rem; --intro-lh: 1.6; --muted: #2d2d2d;
+    --h2: 1.75rem; --h2-side: 1.75rem;
+    --h3: 1.25rem; --h3-color: #2d2d2d; --h3-w: 600;
+    --body: 1.0625rem; --body-lh: 1.65; --step: 1.0625rem; --step-lh: 1.7; --measure: 68ch;
+    --label: 0.75rem; --label-ls: 0.06em; --label-w: 600;
+    --meta-val: 1.0625rem; --ing: 1.0625rem; --pill: 0.8125rem; --crumb: 0.875rem;
+    --side-title: 1.25rem; --story-style: normal;
+  }
+  body[data-v="b"] {
+    --f-head: 'Fraunces', Georgia, serif;
+    --f-body: 'DM Sans', system-ui, sans-serif;
+    --f-h3: 'DM Sans', system-ui, sans-serif;
+    --h1: 2.5rem;  --h1-lh: 1.15;  --h1-ls: -0.01em;
+    --intro: 1.1875rem; --intro-lh: 1.6; --muted: #2d2d2d;
+    --h2: 1.75rem; --h2-side: 1.75rem;
+    --h3: 1.25rem; --h3-color: #2d2d2d; --h3-w: 700;
+    --body: 1.0625rem; --body-lh: 1.65; --step: 1.0625rem; --step-lh: 1.7; --measure: 68ch;
+    --label: 0.75rem; --label-ls: 0.06em; --label-w: 600;
+    --meta-val: 1.0625rem; --ing: 1.0625rem; --pill: 0.8125rem; --crumb: 0.875rem;
+    --side-title: 1.25rem; --story-style: normal;
+  }
+
+  /* ---------- Preview chrome ---------- */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--cream); color: var(--ink); font-family: var(--f-body); font-size: var(--body); line-height: var(--body-lh); -webkit-font-smoothing: antialiased; }
+  .switcher { position: sticky; top: 0; z-index: 5; background: #1f2328; color: #fff; padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-family: system-ui, sans-serif; font-size: 14px; }
+  .switcher button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #57606a; background: transparent; color: #fff; cursor: pointer; }
+  .switcher button.on { background: #fff; color: #1f2328; border-color: #fff; font-weight: 600; }
+  .switcher .note { color: #c9d1d9; margin-left: auto; }
+
+  /* ---------- Recipe page (mirrors src/pages/recipes/[slug].astro) ---------- */
+  .container { width: min(1200px, calc(100% - 48px)); margin: auto; padding-bottom: 48px; }
+  .breadcrumb { font-size: var(--crumb); color: var(--muted); margin: 24px 0 16px; }
+  .breadcrumb a { color: var(--primary); font-weight: 500; }
+  h1, h2, h3 { margin: 0; }
+  h1 { font-family: var(--f-head); font-weight: 700; font-size: var(--h1); line-height: var(--h1-lh); letter-spacing: var(--h1-ls); color: var(--primary); margin-bottom: 10px; }
+  h2 { font-family: var(--f-head); font-weight: 700; font-size: var(--h2); line-height: 1.25; color: var(--primary); margin-bottom: 14px; }
+  aside h2 { font-size: var(--h2-side); }
+  .intro { font-size: var(--intro); line-height: var(--intro-lh); color: var(--muted); max-width: 720px; margin: 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .pill { background: var(--card-bg); border: 1px solid var(--line); color: var(--primary); padding: 4px 12px; border-radius: 9999px; font-size: var(--pill); font-weight: 600; }
+  .actions { display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; border: 1px solid var(--primary); color: var(--primary); background: transparent; padding: 0 14px; border-radius: 8px; font-family: var(--f-body); font-size: 0.875rem; font-weight: 600; line-height: 1; }
+
+  .layout { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 40px; margin-top: 28px; }
+  .photo { width: 100%; aspect-ratio: 16 / 9; border-radius: 16px; background: #e9d3c0; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; color: var(--ink); font-size: 14px; }
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .meta div { background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-height: 52px; display: flex; flex-direction: column; justify-content: center; }
+  .meta span { font-size: var(--label); font-weight: var(--label-w); letter-spacing: var(--label-ls); text-transform: uppercase; color: var(--muted); line-height: 1.2; }
+  .meta strong { font-size: var(--meta-val); font-weight: 700; line-height: 1.3; }
+  .story { background: #fff9f3; border-left: 4px solid var(--primary); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
+  .story b { display: block; font-size: var(--label); letter-spacing: var(--label-ls); text-transform: uppercase; color: var(--primary); margin-bottom: 6px; }
+  .story p { margin: 0; font-style: var(--story-style); line-height: var(--body-lh); max-width: var(--measure); }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+  .ing-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .ing-head h2 { margin: 0; }
+  .scale { font-size: 0.875rem; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
+  .ing { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid #f2e7db; font-size: var(--ing); line-height: 1.4; }
+  .ing i { width: 16px; height: 16px; border: 1.5px solid var(--primary); border-radius: 3px; flex: none; }
+  .steps h2 { margin: 8px 0 18px; }
+  .step { display: flex; gap: 18px; margin-bottom: 26px; }
+  .num { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; font-family: var(--f-body); }
+  .step h3 { font-family: var(--f-h3); font-size: var(--h3); font-weight: var(--h3-w); color: var(--h3-color); line-height: 1.3; margin-bottom: 6px; }
+  .step p { margin: 0; font-size: var(--step); line-height: var(--step-lh); max-width: var(--measure); }
+  .side-item { display: flex; gap: 12px; align-items: center; padding: 8px 0; }
+  .thumb { width: 60px; height: 60px; border-radius: 8px; background: #e9d3c0; flex: none; }
+  .side-item h3 { font-family: var(--f-body); font-size: var(--side-title); font-weight: 600; line-height: 1.3; color: var(--ink); margin-bottom: 2px; }
+  .side-item small { font-size: 0.8125rem; color: var(--muted); }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .meta { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body data-v="a">
+  <div class="switcher">
+    <strong>Typography preview:</strong>
+    <button data-v="current">Current</button>
+    <button data-v="a" class="on">Option 1: Playfair Display + Inter</button>
+    <button data-v="b">Option 2: Fraunces + DM Sans</button>
+    <span class="note">Preview only. The site is unchanged.</span>
+  </div>
+
+  <div class="container">
+    <div class="breadcrumb"><a>Home</a> › <a>Sweets</a> › Sweet Pongal with Jaggery (Sakkarai Pongal)</div>
+
+    <div class="recipe-title">
+      <h1>Sweet Pongal with Jaggery (Sakkarai Pongal)</h1>
+      <p class="intro">A temple-style sweet made with rice, moong dal and jaggery, finished with ghee-roasted cashews and cardamom.</p>
+      <div class="tags">
+        <span class="pill">Sweets</span><span class="pill">Festival</span><span class="pill">Vegetarian</span>
+      </div>
+      <div class="actions"><span class="btn">♡ Save</span><span class="btn">↗ Share</span><span class="btn">▣ Print</span></div>
+    </div>
+
+    <div class="layout">
+      <div>
+        <div class="photo">Recipe photo or video</div>
+
+        <div class="meta">
+          <div><span>Prep time</span><strong>15 min</strong></div>
+          <div><span>Cook time</span><strong>30 min</strong></div>
+          <div><span>Servings</span><strong>4</strong></div>
+          <div><span>Difficulty</span><strong>Easy</strong></div>
+        </div>
+
+        <div class="story">
+          <b>Story &amp; background</b>
+          <p>Sakkarai Pongal is cooked on Thai Pongal day and offered to the Sun God first. The slow-cooked rice and dal turn soft and creamy, and the jaggery syrup gives it a deep caramel flavour.</p>
+        </div>
+
+        <div class="panel">
+          <div class="ing-head"><h2>Ingredients</h2><span class="scale">Servings: <strong>4</strong> &nbsp; 0.5x · 1x · 2x</span></div>
+          <div class="grid">
+            <div class="ing"><i></i><span>1 cup raw rice</span></div>
+            <div class="ing"><i></i><span>1/4 cup moong dal</span></div>
+            <div class="ing"><i></i><span>1 1/2 cups powdered jaggery</span></div>
+            <div class="ing"><i></i><span>3 tbsp ghee</span></div>
+            <div class="ing"><i></i><span>10 cashews</span></div>
+            <div class="ing"><i></i><span>1/2 tsp cardamom powder</span></div>
+          </div>
+        </div>
+
+        <section class="steps">
+          <h2>How to make Sweet Pongal with Jaggery</h2>
+          <div class="step"><div class="num">1</div><div>
+            <h3>Roast and cook the dal and rice</h3>
+            <p>Dry roast the moong dal until it smells nutty. Rinse it with the rice, then pressure cook with 4 cups of water for 4 whistles until the mixture is soft and mushy.</p>
+          </div></div>
+          <div class="step"><div class="num">2</div><div>
+            <h3>Make the jaggery syrup</h3>
+            <p>Melt the jaggery with 1/2 cup of water, then strain to remove impurities. Simmer for 3 to 4 minutes until it thickens slightly. Do not let it reach a string consistency.</p>
+          </div></div>
+          <div class="step"><div class="num">3</div><div>
+            <h3>Combine and finish</h3>
+            <p>Mash the rice and dal lightly, add the syrup and cook on low heat for 5 minutes. Fry the cashews in ghee, then add them with the cardamom and the remaining ghee.</p>
+          </div></div>
+        </section>
+      </div>
+
+      <aside>
+        <div class="panel">
+          <h2>You might also like</h2>
+          <div class="side-item"><div class="thumb"></div><div><h3>Rava Kesari</h3><small>Sweets • 25 min</small></div></div>
+          <div class="side-item"><div class="thumb"></div><div><h3>Ven Pongal</h3><small>Breakfast • 30 min</small></div></div>
+          <div class="side-item"><div class="thumb"></div><div><h3>Paal Payasam</h3><small>Sweets • 45 min</small></div></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    if (location.hash) { document.body.dataset.v = location.hash.slice(1); document.querySelectorAll('.switcher button').forEach(function (x) { x.classList.toggle('on', x.dataset.v === document.body.dataset.v); }); }
+    document.querySelectorAll('.switcher button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.body.dataset.v = b.dataset.v;
+        document.querySelectorAll('.switcher button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      });
+    });
+  </script>
+</body>
+</html>
