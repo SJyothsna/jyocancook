@@ -136,16 +136,36 @@ function previewLink(slug: string, label = 'Preview') {
   return `<a class="btn btn-outline" href="/api/admin/preview/${encodeURIComponent(slug)}" target="_blank" rel="noopener" style="padding:4px 10px;font-size:var(--fs-xs);">${label}</a>`;
 }
 
+// Category chosen in the filter above the recipe list ('' = all categories).
+let recipeCategoryFilter = '';
+
+// Filter next to the Add recipe button: shows only the recipes of one category.
+function recipeFilterSelect() {
+  const categories: { slug: string; name: string }[] = cache.categories?.data || [];
+  return `<select id="recipe-category-filter" aria-label="Filter recipes by category" style="margin-left:auto;min-width:180px;padding:8px 10px;font-size:var(--fs-sm);"><option value="">All categories</option>${categories
+    .map(
+      (c) =>
+        `<option value="${esc(c.slug)}" ${c.slug === recipeCategoryFilter ? 'selected' : ''}>${esc(c.name)}</option>`,
+    )
+    .join('')}</select>`;
+}
+
 function renderRecipes() {
-  const recipes = cache.recipes || [];
-  const current = editing ? recipes.find((r: any) => r.slug === editing) : undefined;
-  content.innerHTML = `<div class="section-heading"><h2>Recipes</h2>${actionButton(
+  const allRecipes = cache.recipes || [];
+  const current = editing ? allRecipes.find((r: any) => r.slug === editing) : undefined;
+  const showingForm = Boolean(current) || editing === '__new__';
+  const recipes = recipeCategoryFilter
+    ? allRecipes.filter((r: any) => r.category === recipeCategoryFilter)
+    : allRecipes;
+  content.innerHTML = `<div class="section-heading"><h2>Recipes</h2>${showingForm ? '' : recipeFilterSelect()}${actionButton(
     current ? 'Back to list' : 'Add recipe',
     'new',
   )}</div>${
-    current || editing === '__new__'
+    showingForm
       ? recipeForm(current)
-      : `<table class="admin-table"><thead><tr><th>Recipe</th><th>Category</th><th>Published</th><th>Featured</th><th></th></tr></thead><tbody>${recipes
+      : `<table class="admin-table"><thead><tr><th>Recipe</th><th>Category</th><th>Published</th><th>Featured</th><th></th></tr></thead><tbody>${
+          recipes.length ? '' : '<tr><td colspan="5">No recipes in this category.</td></tr>'
+        }${recipes
           .map(
             (r: any) =>
               `<tr><td>${esc(r.title)}</td><td>${listSelect('category', r)}</td>${['published', 'featured']
@@ -162,6 +182,14 @@ function renderRecipes() {
           .join('')}</tbody></table>`
   }`;
   wireActions();
+  const filterSelect = document.getElementById('recipe-category-filter') as HTMLSelectElement | null;
+  if (filterSelect) {
+    filterSelect.onchange = () => {
+      recipeCategoryFilter = filterSelect.value;
+      renderRecipes();
+      document.getElementById('recipe-category-filter')?.focus();
+    };
+  }
   // Category, Published and Featured save straight from the list.
   content.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-field]').forEach((control) => {
     control.onchange = async () => {
