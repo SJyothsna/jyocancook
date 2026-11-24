@@ -37,11 +37,14 @@ const recipes: Recipe[] = recipeFiles.map((f) => {
   r.slug ??= path.basename(f, '.json');
   return r;
 });
-const byOrder = (a: { order?: number }, b: { order?: number }) => (a.order ?? 0) - (b.order ?? 0);\nconst categories: Array<{ slug: string; name: string; order?: number }> = JSON.parse(git('show', 'HEAD:config/categories.json')).sort(byOrder);
+const byOrder = (a: { order?: number }, b: { order?: number }) => (a.order ?? 0) - (b.order ?? 0);
+const categories: Array<{ slug: string; name: string; order?: number }> = JSON.parse(git('show', 'HEAD:config/categories.json')).sort(byOrder);
 const tagList: string[] = JSON.parse(git('show', 'HEAD:config/tags.json'));
 const menu: Array<{ label: string; visible?: boolean; order?: number }> = JSON.parse(git('show', 'HEAD:config/menu.json')).sort(byOrder);
 const uniqueTags = new Map<string, string>();
-for (const name of [...tagList, ...recipes.flatMap((r) => r.tags ?? [])]) if (!uniqueTags.has(slugify(name))) uniqueTags.set(slugify(name), name);\n// What the import is expected to carry over: whatever is committed (the counts follow the content).\nconst N = { categories: categories.length, tags: uniqueTags.size, recipes: recipes.length, menu_items: menu.length };
+for (const name of [...tagList, ...recipes.flatMap((r) => r.tags ?? [])]) if (!uniqueTags.has(slugify(name))) uniqueTags.set(slugify(name), name);
+// What the import is expected to carry over: whatever is committed (the counts follow the content).
+const N = { categories: categories.length, tags: uniqueTags.size, recipes: recipes.length, menu_items: menu.length };
 
 // ---------------------------------------------------------------- helpers
 
