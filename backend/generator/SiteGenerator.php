@@ -161,7 +161,7 @@ class SiteGenerator {
                 $cSlug = $this->assertSafeSlug((string)$cat['slug'], 'category');
                 $activeCategorySlugs[] = $cSlug;
                 $catRecipes = $this->recipeService->getRecipesByCategory($cSlug, true);
-                $catHtml = $this->renderer->renderCategoryPage($cat, $catRecipes, $categories, $subcategories, $dietSlugs);
+                $catHtml = $this->renderer->renderCategoryPage($cat, $catRecipes, $categories, $subcategories, $dietSlugs, $diets);
                 $this->writeStagedFile("category/{$cSlug}/index.html", $catHtml);
                 $sitemapUrls[] = ['loc' => $this->siteUrl . "/category/{$cSlug}/", 'changefreq' => 'weekly', 'priority' => '0.7'];
                 $stats['pages_generated']++;

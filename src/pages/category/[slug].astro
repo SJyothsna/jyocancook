@@ -23,6 +23,9 @@ const filters: { slug: string; name: string }[] = byCategory
       (s) => category.subcategories?.includes(s.slug) && list.some((r) => r.subcategories?.includes(s.slug)),
     );
 const itemFilter = (r: (typeof recipes)[number]) => (byCategory ? r.category : (r.subcategories ?? []).join(','));
+// Diet chips on the regular category pages; a diet page is already one diet.
+const dietSlug = (name: string) => diets.find((d) => d.name === name)?.slug ?? '';
+const dietFilters = byCategory ? [] : diets.filter((d) => list.some((r) => r.diet === d.name));
 const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
 ---
 <Base title={category.name} description={category.description}>
@@ -33,6 +36,14 @@ const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
     </span>
     <h1 class="page-title">{category.name}</h1>
     {category.description && <p class="page-lead">{category.description}</p>}
+    {dietFilters.length > 0 && (
+      <div id="diet-chips" class="filter-chips" role="group" aria-label="Filter by diet">
+        <button type="button" class="tag-chip tag-chip-selected" data-diet="" aria-pressed="true">All diets</button>
+        {dietFilters.map((d) => (
+          <button type="button" class="tag-chip" data-diet={d.slug} aria-pressed="false">{d.name}</button>
+        ))}
+      </div>
+    )}
     {filters.length > 0 && (
       <div id="subcategory-chips" class="filter-chips" role="group" aria-label={byCategory ? 'Filter by category' : 'Filter by subcategory'}>
         <button type="button" class="tag-chip tag-chip-selected" data-subcategory="" aria-pressed="true">All</button>
@@ -45,7 +56,7 @@ const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
       <>
         <p class="result-count" id="result-count" aria-live="polite">{countLabel(list.length)}</p>
         <div class="cards" id="category-list">
-          {list.map((r) => <div data-subcategory={itemFilter(r)}><RecipeCard recipe={r} /></div>)}
+          {list.map((r) => <div data-subcategory={itemFilter(r)} data-diet={dietSlug(r.diet)}><RecipeCard recipe={r} /></div>)}
         </div>
       </>
     ) : (
@@ -59,26 +70,41 @@ const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
 </Base>
 
 <script>
-  const chips = [...document.querySelectorAll<HTMLButtonElement>('#subcategory-chips .tag-chip')];
   const items = [...document.querySelectorAll<HTMLElement>('#category-list > div')];
   const count = document.getElementById('result-count');
-  let active = '';
-  chips.forEach((chip) =>
-    chip.addEventListener('click', () => {
-      const value = chip.dataset.subcategory ?? '';
-      active = value !== '' && active === value ? '' : value;
-      chips.forEach((c) => {
-        const on = (c.dataset.subcategory ?? '') === active;
-        c.classList.toggle('tag-chip-selected', on);
-        c.setAttribute('aria-pressed', String(on));
+  // Two filter groups (diet, sub category). Several chips of a group can be selected and a recipe matches a
+  // group when it has any selected value; it must match every group that has a selection. "All" clears its group.
+  const groups = [
+    { key: 'diet', chips: [...document.querySelectorAll<HTMLButtonElement>('#diet-chips .tag-chip')], active: [] as string[] },
+    { key: 'subcategory', chips: [...document.querySelectorAll<HTMLButtonElement>('#subcategory-chips .tag-chip')], active: [] as string[] },
+  ];
+  function apply() {
+    let visible = 0;
+    items.forEach((el) => {
+      const hide = groups.some((g) => {
+        if (!g.active.length) return false;
+        const values = (el.dataset[g.key] ?? '').split(',');
+        return !g.active.some((v) => values.includes(v));
       });
-      let visible = 0;
-      items.forEach((el) => {
-        const hide = active !== '' && !(el.dataset.subcategory ?? '').split(',').includes(active);
-        el.classList.toggle('hidden', hide);
-        if (!hide) visible += 1;
-      });
-      if (count) count.textContent = `${visible} ${visible === 1 ? 'recipe' : 'recipes'}`;
-    }),
+      el.classList.toggle('hidden', hide);
+      if (!hide) visible += 1;
+    });
+    if (count) count.textContent = `${visible} ${visible === 1 ? 'recipe' : 'recipes'}`;
+  }
+  groups.forEach((g) =>
+    g.chips.forEach((chip) =>
+      chip.addEventListener('click', () => {
+        const value = chip.dataset[g.key] ?? '';
+        if (value === '') g.active = [];
+        else g.active = g.active.includes(value) ? g.active.filter((v) => v !== value) : [...g.active, value];
+        g.chips.forEach((c) => {
+          const v = c.dataset[g.key] ?? '';
+          const on = v === '' ? g.active.length === 0 : g.active.includes(v);
+          c.classList.toggle('tag-chip-selected', on);
+          c.setAttribute('aria-pressed', String(on));
+        });
+        apply();
+      }),
+    ),
   );
 </script>

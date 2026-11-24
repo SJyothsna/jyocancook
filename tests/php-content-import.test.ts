@@ -287,7 +287,7 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const curries = fs.readFileSync(stagingFile('category/curries/index.html'), 'utf8');
     assert.match(curries, /data-subcategory="non-vegetarian" aria-pressed="false">Non-Vegetarian</);
     assert.ok(!curries.includes('>Vegetarian</button>'), 'an unused sub category is not offered');
-    assert.ok(!fs.readFileSync(stagingFile('category/breakfast/index.html'), 'utf8').includes('subcategory-chips'),
+    assert.ok(!fs.readFileSync(stagingFile('category/breakfast/index.html'), 'utf8').includes('Filter by subcategory'),
       'a sub category the category does not offer is ignored');
   });
 
@@ -295,8 +295,18 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     const page = fs.readFileSync(stagingFile('category/non-vegetarian/index.html'), 'utf8');
     assert.match(page, /aria-label="Filter by category"/);
     assert.match(page, /data-subcategory="curries" aria-pressed="false">Curries</);
-    assert.match(page, /<div data-subcategory="curries">/);
+    assert.match(page, /<div data-subcategory="curries" data-diet="non-vegetarian">/);
     assert.ok(!page.includes('Filter by subcategory'));
+    assert.match(page, /active: \[\]/, 'several filter chips can be selected at once');
+    assert.ok(!page.includes('Filter by diet'), 'a diet page is already one diet');
+  });
+
+  it('a category page filters by diet as well as by sub category', async () => {
+    const page = fs.readFileSync(stagingFile('category/curries/index.html'), 'utf8');
+    assert.match(page, /aria-label="Filter by diet"/);
+    assert.match(page, /data-diet="" aria-pressed="true">All diets</);
+    assert.match(page, /data-diet="non-vegetarian" aria-pressed="false">Non-Vegetarian</);
+    assert.match(page, /<div data-subcategory="[^"]*" data-diet="non-vegetarian">/);
   });
 
   it('the All Recipes page filters by diet as well as by sub category', async () => {

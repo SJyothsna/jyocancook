@@ -1081,7 +1081,7 @@ HTML;
         return $this->renderLayout('All Recipes', 'Browse all authentic homemade Indian recipes at JyoCanCook.', '/recipes/', $content);
     }
 
-    public function renderCategoryPage(array $category, array $recipes, array $categories = [], array $subcategories = [], array $dietSlugs = ['vegetarian', 'non-vegetarian']): string {
+    public function renderCategoryPage(array $category, array $recipes, array $categories = [], array $subcategories = [], array $dietSlugs = ['vegetarian', 'non-vegetarian'], array $diets = []): string {
         $subNames = $this->subcategoryNames($subcategories);
         $catMap = $this->categorySubMap($categories);
 
@@ -1095,9 +1095,12 @@ HTML;
         $byCategory = in_array((string)($category['slug'] ?? ''), $dietSlugs, true);
 
         $cardsHtml = '';
+        $usedDiets = [];
         foreach ($recipes as $r) {
             $sub = $this->esc($byCategory ? (string)($r['category'] ?? '') : implode(',', $this->recipeSubSlugs($r, $subNames, $catMap)));
-            $cardsHtml .= "<div data-subcategory=\"{$sub}\">" . $this->renderRecipeCard($r) . "</div>\n";
+            $dietSlug = RecipeService::slugify((string)($r['diet'] ?? ''));
+            $usedDiets[$dietSlug] = true;
+            $cardsHtml .= "<div data-subcategory=\"{$sub}\" data-diet=\"{$this->esc($dietSlug)}\">" . $this->renderRecipeCard($r) . "</div>\n";
         }
 
         $total = count($recipes);
@@ -1124,34 +1127,68 @@ HTML;
                 $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc((string)$slug)}\" aria-pressed=\"false\">{$this->esc($name)}</button>\n";
             }
         }
+        // Diet chips (All diets, Vegetarian, Vegan...) on the regular category pages; the diet pages
+        // themselves are already one diet.
+        $dietChips = '';
+        if (!$byCategory) {
+            foreach ($diets as $d) {
+                if (!isset($usedDiets[$d['slug']])) continue;
+                $dietChips .= "<button type=\"button\" class=\"tag-chip\" data-diet=\"{$this->esc((string)$d['slug'])}\" aria-pressed=\"false\">{$this->esc((string)$d['name'])}</button>\n";
+            }
+        }
         $filterLabel = $byCategory ? 'Filter by category' : 'Filter by subcategory';
-        $subcategoryNav = $subChips === '' ? '' : "<div id=\"subcategory-chips\" class=\"filter-chips\" role=\"group\" aria-label=\"{$filterLabel}\">\n"
+        $dietNav = $dietChips === '' ? '' : "<div id=\"diet-chips\" class=\"filter-chips\" role=\"group\" aria-label=\"Filter by diet\">\n"
+            . "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-diet=\"\" aria-pressed=\"true\">All diets</button>\n"
+            . $dietChips . "</div>\n";
+        $subcategoryNav = $dietNav . ($subChips === '' ? '' : "<div id=\"subcategory-chips\" class=\"filter-chips\" role=\"group\" aria-label=\"{$filterLabel}\">\n"
             . "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-subcategory=\"\" aria-pressed=\"true\">All</button>\n"
-            . $subChips . "</div>\n";
-        $filterScript = $subChips === '' ? '' : <<<HTML
+            . $subChips . "</div>\n");
+        $filterScript = $subcategoryNav === '' ? '' : <<<HTML
 <script>
   (function() {
-    var chips = Array.prototype.slice.call(document.querySelectorAll('#subcategory-chips .tag-chip'));
     var items = Array.prototype.slice.call(document.querySelectorAll('#category-list > div'));
     var countEl = document.getElementById('result-count');
-    var active = '';
-    chips.forEach(function(chip) {
-      chip.addEventListener('click', function() {
-        var value = chip.getAttribute('data-subcategory') || '';
-        active = value !== '' && active === value ? '' : value;
-        chips.forEach(function(c) {
-          var on = (c.getAttribute('data-subcategory') || '') === active;
-          c.classList.toggle('tag-chip-selected', on);
-          c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    // Two filter groups (diet, sub category). Several chips of a group can be selected and a recipe
+    // matches a group when it has any selected value; it must match every group that has a selection.
+    // "All" clears its group.
+    var groups = [
+      { attr: 'data-diet', chips: Array.prototype.slice.call(document.querySelectorAll('#diet-chips .tag-chip')), active: [] },
+      { attr: 'data-subcategory', chips: Array.prototype.slice.call(document.querySelectorAll('#subcategory-chips .tag-chip')), active: [] }
+    ];
+
+    function apply() {
+      var visible = 0;
+      items.forEach(function(el) {
+        var hide = groups.some(function(g) {
+          if (g.active.length === 0) return false;
+          var values = (el.getAttribute(g.attr) || '').split(',');
+          return !g.active.some(function(v) { return values.indexOf(v) !== -1; });
         });
-        var visible = 0;
-        items.forEach(function(el) {
-          var subs = (el.getAttribute('data-subcategory') || '').split(',');
-          var hide = active !== '' && subs.indexOf(active) === -1;
-          el.classList.toggle('hidden', hide);
-          if (!hide) visible += 1;
+        el.classList.toggle('hidden', hide);
+        if (!hide) visible += 1;
+      });
+      if (countEl) countEl.textContent = visible + (visible === 1 ? ' recipe' : ' recipes');
+    }
+
+    groups.forEach(function(g) {
+      g.chips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          var value = chip.getAttribute(g.attr) || '';
+          if (value === '') {
+            g.active = [];
+          } else if (g.active.indexOf(value) === -1) {
+            g.active.push(value);
+          } else {
+            g.active = g.active.filter(function(v) { return v !== value; });
+          }
+          g.chips.forEach(function(c) {
+            var v = c.getAttribute(g.attr) || '';
+            var on = v === '' ? g.active.length === 0 : g.active.indexOf(v) !== -1;
+            c.classList.toggle('tag-chip-selected', on);
+            c.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+          apply();
         });
-        if (countEl) countEl.textContent = visible + (visible === 1 ? ' recipe' : ' recipes');
       });
     });
   })();
