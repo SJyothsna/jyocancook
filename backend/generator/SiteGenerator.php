@@ -122,7 +122,7 @@ class SiteGenerator {
             $stats['pages_generated']++;
 
             // 2. All Recipes Catalog (/recipes/)
-            $recipesCatalogHtml = $this->renderer->renderRecipesIndexPage($publishedRecipes, $categories, $tags, $subcategories);
+            $recipesCatalogHtml = $this->renderer->renderRecipesIndexPage($publishedRecipes, $categories, $tags, $subcategories, $diets);
             $this->writeStagedFile('recipes/index.html', $recipesCatalogHtml);
             $sitemapUrls[] = ['loc' => $this->siteUrl . '/recipes/', 'changefreq' => 'daily', 'priority' => '0.9'];
             $stats['pages_generated']++;

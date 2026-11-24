@@ -7,6 +7,8 @@ declare(strict_types=1);
  * responsive layouts, SVG icons, Schema.org JSON-LD, and meta tags.
  */
 
+require_once dirname(__DIR__) . '/services/RecipeService.php';
+
 class TemplateRenderer {
     private string $siteUrl;
     private string $siteName;
@@ -941,9 +943,20 @@ HTML;
         return $this->renderLayout('Authentic Homemade Indian Recipes', 'Discover authentic Indian dishes, everyday meals and family favourites at JyoCanCook.', '/', $content);
     }
 
-    public function renderRecipesIndexPage(array $recipes, array $categories, array $tags, array $subcategories = []): string {
+    public function renderRecipesIndexPage(array $recipes, array $categories, array $tags, array $subcategories = [], array $diets = []): string {
         $subNames = $this->subcategoryNames($subcategories);
         $catMap = $this->categorySubMap($categories);
+
+        // Diet chips: the configured diets (in the Diets tab order) that have at least one recipe here.
+        $usedDiets = [];
+        foreach ($recipes as $r) {
+            $usedDiets[RecipeService::slugify((string)($r['diet'] ?? ''))] = (string)($r['diet'] ?? '');
+        }
+        $dietChips = '';
+        foreach ($diets as $d) {
+            if (!isset($usedDiets[$d['slug']])) continue;
+            $dietChips .= "<button type=\"button\" class=\"tag-chip\" data-diet=\"{$this->esc((string)$d['slug'])}\" aria-pressed=\"false\">{$this->esc((string)$d['name'])}</button>\n";
+        }
 
         $cardsHtml = '';
         $usedSubcategories = [];
@@ -957,7 +970,8 @@ HTML;
             $subSlug = implode(',', $subSlugs);
             $card = $this->renderRecipeCard($r);
 
-            $cardsHtml .= "<div data-title=\"{$this->esc($tLower)}\" data-ingredients=\"{$this->esc($ingNames)}\" data-subcategory=\"{$this->esc($subSlug)}\">{$card}</div>\n";
+            $dietSlug = RecipeService::slugify((string)($r['diet'] ?? ''));
+            $cardsHtml .= "<div data-title=\"{$this->esc($tLower)}\" data-ingredients=\"{$this->esc($ingNames)}\" data-subcategory=\"{$this->esc($subSlug)}\" data-diet=\"{$this->esc($dietSlug)}\">{$card}</div>\n";
         }
 
         $subChips = "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-subcategory=\"\" aria-pressed=\"true\">All</button>\n";
@@ -965,6 +979,11 @@ HTML;
             $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc((string)$slug)}\" aria-pressed=\"false\">{$this->esc($name)}</button>\n";
         }
         $subChips = "<div id=\"subcategory-chips\" style=\"display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px\" role=\"group\" aria-label=\"Filter by subcategory\">\n{$subChips}</div>";
+        if ($dietChips !== '') {
+            // Diet and sub category filters combine: a recipe must match both.
+            $dietChips = "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-diet=\"\" aria-pressed=\"true\">All diets</button>\n" . $dietChips;
+            $subChips = "<div id=\"diet-chips\" style=\"display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px\" role=\"group\" aria-label=\"Filter by diet\">\n{$dietChips}</div>\n" . $subChips;
+        }
 
         $count = count($recipes);
 
@@ -972,7 +991,7 @@ HTML;
 <div class="container section">
   <span class="eyebrow">Recipe collection</span>
   <h1>Find your next favourite</h1>
-  <p class="muted">Browse our recipes or filter by subcategory and name.</p>
+  <p class="muted">Browse our recipes or filter by diet, subcategory and name.</p>
   <div class="filterbar">
     <input id="filter-text" placeholder="Filter recipes by name or ingredient..." aria-label="Filter recipes" />
   </div>
@@ -988,10 +1007,12 @@ HTML;
   (function() {
     var text = document.querySelector('#filter-text');
     var chips = Array.prototype.slice.call(document.querySelectorAll('#subcategory-chips .tag-chip'));
+    var dietChips = Array.prototype.slice.call(document.querySelectorAll('#diet-chips .tag-chip'));
     var items = Array.prototype.slice.call(document.querySelectorAll('#recipe-list > div'));
     var countEl = document.querySelector('#recipe-count');
     var emptyEl = document.querySelector('#filter-empty');
     var activeSub = '';
+    var activeDiet = '';
 
     function filter() {
       var q = (text ? text.value : '').toLowerCase().trim();
@@ -1003,7 +1024,8 @@ HTML;
         var s = (el.getAttribute('data-subcategory') || '').split(',');
 
         var ok = (!q || (t + ' ' + ing).indexOf(q) !== -1)
-          && (!activeSub || s.indexOf(activeSub) !== -1);
+          && (!activeSub || s.indexOf(activeSub) !== -1)
+          && (!activeDiet || el.getAttribute('data-diet') === activeDiet);
 
         el.classList.toggle('hidden', !ok);
         if (ok) n++;
@@ -1026,12 +1048,31 @@ HTML;
       });
     });
 
+    dietChips.forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        var value = chip.getAttribute('data-diet') || '';
+        activeDiet = value !== '' && activeDiet === value ? '' : value;
+        dietChips.forEach(function(c) {
+          var on = (c.getAttribute('data-diet') || '') === activeDiet;
+          c.classList.toggle('tag-chip-selected', on);
+          c.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        filter();
+      });
+    });
+
     if (text) text.addEventListener('input', filter);
 
-    var initialSub = new URLSearchParams(window.location.search).get('subcategory');
+    var params = new URLSearchParams(window.location.search);
+    var initialSub = params.get('subcategory');
     if (initialSub) {
       var match = chips.filter(function(c) { return c.getAttribute('data-subcategory') === initialSub; })[0];
       if (match) match.click();
+    }
+    var initialDiet = params.get('diet');
+    if (initialDiet) {
+      var dietMatch = dietChips.filter(function(c) { return c.getAttribute('data-diet') === initialDiet; })[0];
+      if (dietMatch) dietMatch.click();
     }
   })();
 </script>

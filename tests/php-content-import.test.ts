@@ -299,6 +299,14 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.ok(!page.includes('Filter by subcategory'));
   });
 
+  it('the All Recipes page filters by diet as well as by sub category', async () => {
+    const page = fs.readFileSync(stagingFile('recipes/index.html'), 'utf8');
+    assert.match(page, /aria-label="Filter by diet"/);
+    assert.match(page, /data-diet="non-vegetarian" aria-pressed="false">Non-Vegetarian</);
+    assert.match(page, /<div data-title="andhra chicken curry"[^>]*data-diet="non-vegetarian">/);
+    assert.match(page, /aria-label="Filter by subcategory"/);
+  });
+
   it('publishing creates the same public URLs as the existing site: /recipes/<slug>/, /category/<slug>/, /tag/<slug>/', async () => {
     const r = await post('/api/admin/publish');
     assert.equal(r.httpStatusCode, 200, r.text);
