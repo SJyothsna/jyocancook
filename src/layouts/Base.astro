@@ -8,6 +8,8 @@ const {
   description = 'Discover authentic Indian dishes, everyday meals and family favourites at JyoCanCook.',
   image = '/images/recipes/andhra-chicken-curry.png',
   noindex = false,
+  // true: the header links are filled in by the page's script from the saved Navigation Menu (admin page).
+  dynamicNav = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
@@ -68,7 +70,7 @@ const isActive = (href: string) =>
             <Menu size={18} aria-hidden="true" />
           </button>
           <nav class="nav" id="site-nav" aria-label="Main navigation">
-            {menu.map((item) => (
+            {!dynamicNav && menu.map((item) => (
               <a
                 href={item.href}
                 class:list={{ active: isActive(item.href) }}

@@ -1,6 +1,7 @@
 import { formatQty, parseQty } from '../lib/fractions';
 import { slug as makeSlug } from '../lib/admin-sanitize';
 import { applyListFormat } from '../lib/recipe-text';
+import { navLinks } from '../lib/nav-links';
 
 type Item = Record<string, any>;
 const el = (id: string) => document.getElementById(id)!;
@@ -70,6 +71,24 @@ async function api(path: string, method = 'GET', data?: any) {
   }
 }
 
+// The header navigation of this page is not baked in at build time. It is built from the saved
+// Navigation Menu with the same rules as the public pages (hidden items dropped, the rest ordered),
+// so a change shows on the next load or save without rebuilding any static page.
+function renderHeaderNav(rows: Item[] | undefined) {
+  const nav = document.getElementById('site-nav');
+  if (!nav) return;
+  nav.replaceChildren(
+    ...navLinks(rows).map((i) => {
+      const a = document.createElement('a');
+      a.href = i.href;
+      const span = document.createElement('span');
+      span.textContent = i.label;
+      a.append(span);
+      return a;
+    }),
+  );
+}
+
 async function load() {
   notice('Loading ' + tab + '...');
   try {
@@ -88,6 +107,7 @@ async function load() {
       cache.diets = dietsRes;
     } else {
       cache[tab] = await api(tab);
+      if (tab === 'menu') renderHeaderNav(cache.menu.data);
       if (tab === 'categories') {
         // The categories tab maps sub categories to each category.
         cache.subcategories = await api('subcategories').catch(() => ({ data: [] }));
@@ -1260,6 +1280,9 @@ if (rebuildBtn) {
       userEl.textContent = `Logged in as @${status.user.login || status.user.id}`;
     }
     cache.categories = await api('categories');
+    api('menu')
+      .then((res) => renderHeaderNav(res.data))
+      .catch(() => {});
     await load();
   } catch (e: any) {
     const msg = String(e?.message || e);
