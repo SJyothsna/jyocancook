@@ -389,6 +389,16 @@ ALTER TABLE `recipes` ADD COLUMN `subcategory_slug` VARCHAR(80) NULL AFTER `cate
 ```
 
 A fresh database gets the column from `schema.sql`. Running it twice fails with "Duplicate column name", which is harmless.
+**Diets (required once on an existing database, before saving any recipe or opening the Diets tab with the updated code).** In phpMyAdmin run both statements:
+
+```sql
+CREATE TABLE IF NOT EXISTS `diets` (`id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, `slug` VARCHAR(40) NOT NULL UNIQUE, `name` VARCHAR(40) NOT NULL UNIQUE, `order_num` INT NOT NULL DEFAULT 0, `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE `recipes` MODIFY `diet` VARCHAR(120) NOT NULL DEFAULT 'Vegetarian';
+```
+
+The first adds the Diets list (empty means Vegetarian and Non-Vegetarian are used); the second lets a recipe have several diets, stored comma-separated.
+
+
 
 
 
