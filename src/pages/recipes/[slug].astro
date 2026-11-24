@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import { recipes, categoryName, type Recipe } from '../../lib/data';
 import { formatQty } from '../../lib/fractions';
+import { stepBlocks, unitLabel } from '../../lib/recipe-text';
 import { ArrowUpRight, Clock, Flame, Heart, Lightbulb, Printer, Star, Users, Utensils, Zap } from '@lucide/astro';
 
 export function getStaticPaths() {
@@ -265,7 +266,7 @@ const structured = {
                       <input type="checkbox" />
                       <span>
                         <span class="qty" data-amount={i.amount ?? ''}>{formatQty(i.amount, true)}</span>
-                        {i.unit ? ` ${i.unit}` : ''} {i.name}
+                        {i.unit ? ` ${unitLabel(i.unit)}` : ''} {i.name}
                       </span>
                     </label>
                   ))}
@@ -283,7 +284,15 @@ const structured = {
               <div class="step-body">
                 <div class="step-content">
                   <h3>{s.title}{s.optional && <span class="step-optional">Optional</span>}</h3>
-                  <p>{s.text}</p>
+                  {stepBlocks(s.text).map((b) =>
+                    b.type === 'ul' ? (
+                      <ul>{b.lines.map((l) => <li>{l}</li>)}</ul>
+                    ) : b.type === 'ol' ? (
+                      <ol>{b.lines.map((l) => <li>{l}</li>)}</ol>
+                    ) : (
+                      <p>{b.lines.join('\n')}</p>
+                    ),
+                  )}
                 </div>
                 {s.image && (
                   <div class="step-image-wrap">

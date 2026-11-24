@@ -112,6 +112,18 @@ export function sanitizeConfig(type: string, data: any) {
     if (new Set(result.map((x: any) => x.slug)).size !== result.length) throw Error('Duplicate sub category slug');
     return result;
   }
+  if (type === 'diets') {
+    const result = data.map((x: any, i: number) => ({
+      slug: slug(String(x.slug || x.name || '')).slice(0, 40),
+      name: String(x.name || '').trim().slice(0, 40),
+      order: Number(x.order) || i,
+    }));
+    if (!result.length) throw Error('Add at least one diet');
+    if (result.some((x: any) => !x.slug || !x.name)) throw Error('Diet name and slug required');
+    if (new Set(result.map((x: any) => x.slug)).size !== result.length) throw Error('Duplicate diet slug');
+    return result;
+  }
+
   if (type === 'tags') return [...new Set(data.map((x: any) => String(x).trim().slice(0, 60)).filter(Boolean))];
   if (type === 'menu') {
     const result = data.map((x: any) => ({

@@ -98,7 +98,7 @@ function adminDevPlugin() {
             });
           }
 
-          if (['categories', 'subcategories', 'menu', 'tags'].includes(type)) {
+          if (['categories', 'subcategories', 'diets', 'menu', 'tags'].includes(type)) {
             const filePath = path.join(process.cwd(), `config/${type}.json`);
             if (req.method === 'GET') {
               const content = await fs.readFile(filePath, 'utf-8');

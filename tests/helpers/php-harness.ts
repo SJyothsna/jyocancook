@@ -101,6 +101,8 @@ function jyo_test_content_schema(PDO $pdo): void {
   $pdo->exec("CREATE TABLE IF NOT EXISTS category_subcategories (category_slug TEXT NOT NULL, subcategory_slug TEXT NOT NULL, PRIMARY KEY (category_slug, subcategory_slug))");
 
   $pdo->exec("CREATE TABLE IF NOT EXISTS subcategories (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL UNIQUE, name TEXT NOT NULL, order_num INTEGER NOT NULL DEFAULT 0)");
+  $pdo->exec("CREATE TABLE IF NOT EXISTS diets (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL UNIQUE, name TEXT NOT NULL UNIQUE, order_num INTEGER NOT NULL DEFAULT 0)");
+
   $pdo->exec("CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, slug TEXT UNIQUE NOT NULL)");
   $pdo->exec("CREATE TABLE IF NOT EXISTS menu_items (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, href TEXT NOT NULL, order_num INTEGER NOT NULL DEFAULT 0, visible INTEGER NOT NULL DEFAULT 1)");
   $pdo->exec("CREATE TABLE IF NOT EXISTS recipes (id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', category_slug TEXT NOT NULL, subcategory_slug TEXT, diet TEXT NOT NULL DEFAULT 'Vegetarian', prep_time INTEGER NOT NULL DEFAULT 15, cook_time INTEGER NOT NULL DEFAULT 30, servings INTEGER NOT NULL DEFAULT 4, difficulty TEXT NOT NULL DEFAULT 'Easy', image TEXT NOT NULL DEFAULT '/images/recipes/recipe-placeholder.svg', published INTEGER NOT NULL DEFAULT 1, featured INTEGER NOT NULL DEFAULT 0, story TEXT, youtube_url TEXT, calories INTEGER, carbs REAL, protein REAL, fat REAL, fiber REAL, tips_json TEXT, serve_with_json TEXT, created_at TEXT, updated_at TEXT, published_at TEXT)");

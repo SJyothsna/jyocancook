@@ -25,7 +25,7 @@ An authentic homemade Indian recipe platform with categories, tags, full-text re
 ## Project layout
 
 ```
-config/                  categories.json / subcategories.json / tags.json / menu.json (seed content)
+config/                  categories.json / subcategories.json / diets.json / tags.json / menu.json (seed content)
 src/content/recipes/     one JSON file per recipe (seed content and local dev)
 src/pages/               public and admin routes
 src/components/          recipe cards and custom category SVG icons

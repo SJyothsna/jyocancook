@@ -23,6 +23,7 @@ function runMigration(?PDO $pdo = null): array {
         'tags_imported' => 0,
         'menu_imported' => 0,
         'subcategories_imported' => 0,
+        'diets_imported' => 0,
         'recipes_imported' => 0,
         'admin_exists' => false,
         'warnings' => [],
@@ -56,6 +57,7 @@ function runMigration(?PDO $pdo = null): array {
     $summary['menu_imported'] = $r['created']['menu_items'];
     $summary['subcategories_imported'] = importSubcategories($pdo, $configDir);
     $summary['recipes_imported'] = $r['created']['recipes'];
+    $summary['diets_imported'] = importDiets($pdo, $configDir);
     $summary['warnings'] = $r['warnings'];
     $summary['errors'] = $r['errors'];
 

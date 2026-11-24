@@ -37,6 +37,49 @@ class TemplateRenderer {
         return rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.');
     }
 
+    /** "tbsp" -> "Tbsp", "tsp" -> "Tsp"; other units are shown as typed. Same rules as src/lib/recipe-text.ts. */
+    public static function unitLabel(string $unit): string {
+        $labels = ['tsp' => 'Tsp', 'tbsp' => 'Tbsp'];
+        return $labels[strtolower(trim($unit))] ?? $unit;
+    }
+
+    /**
+     * Instruction text is plain lines: "- " / "• " lines become a bullet list, "1. " lines a numbered
+     * list, anything else normal text (line breaks kept). Same rules as src/lib/recipe-text.ts.
+     */
+    public function renderStepText(string $text): string {
+        $blocks = [];
+        foreach (preg_split('/\R/u', $text) ?: [] as $raw) {
+            if (trim($raw) === '') continue;
+            if (preg_match('/^\s*[-*\x{2022}]\s+(.*)$/u', $raw, $m)) {
+                $type = 'ul';
+                $line = trim($m[1]);
+            } elseif (preg_match('/^\s*\d+[.)]\s+(.*)$/u', $raw, $m)) {
+                $type = 'ol';
+                $line = trim($m[1]);
+            } else {
+                $type = 'p';
+                $line = trim($raw);
+            }
+            $last = count($blocks) - 1;
+            if ($last >= 0 && $blocks[$last]['type'] === $type) {
+                $blocks[$last]['lines'][] = $line;
+            } else {
+                $blocks[] = ['type' => $type, 'lines' => [$line]];
+            }
+        }
+        $html = '';
+        foreach ($blocks as $b) {
+            if ($b['type'] === 'p') {
+                $html .= '<p>' . $this->esc(implode("\n", $b['lines'])) . '</p>';
+            } else {
+                $items = implode('', array_map(fn($l) => '<li>' . $this->esc($l) . '</li>', $b['lines']));
+                $html .= "<{$b['type']}>{$items}</{$b['type']}>";
+            }
+        }
+        return $html;
+    }
+
     public static function esc(?string $v): string {
         return htmlspecialchars((string)($v ?? ''), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
     }
@@ -479,7 +522,7 @@ HTML;
             $secTitleHtml = !empty($sec['title']) ? "<h3 class=\"ingredient-section-title\">{$this->esc($sec['title'])}</h3>\n" : '';
             $itemsHtml = '';
             foreach ($sec['items'] as $i) {
-                $unitPart = !empty($i['unit']) ? ' ' . $this->esc($i['unit']) : '';
+                $unitPart = !empty($i['unit']) ? ' ' . $this->esc(self::unitLabel((string)$i['unit'])) : '';
                 $qtyText = self::formatQty(isset($i['amount']) && $i['amount'] !== '' ? (float)$i['amount'] : null);
                 $itemsHtml .= <<<HTML
 <label class="ingredient">
@@ -522,7 +565,7 @@ HTML;
   <div class="step-body">
     <div class="step-content">
       <h3>{$this->esc($stepTitle)}{$optionalHtml}</h3>
-      <p>{$this->esc($s['text'])}</p>
+      {$this->renderStepText((string)$s['text'])}
     </div>
     {$imgHtml}
   </div>
@@ -997,7 +1040,7 @@ HTML;
         return $this->renderLayout('All Recipes', 'Browse all authentic homemade Indian recipes at JyoCanCook.', '/recipes/', $content);
     }
 
-    public function renderCategoryPage(array $category, array $recipes, array $categories = [], array $subcategories = []): string {
+    public function renderCategoryPage(array $category, array $recipes, array $categories = [], array $subcategories = [], array $dietSlugs = ['vegetarian', 'non-vegetarian']): string {
         $subNames = $this->subcategoryNames($subcategories);
         $catMap = $this->categorySubMap($categories);
 
@@ -1006,9 +1049,13 @@ HTML;
             ? "<img src=\"{$this->esc($category['image'])}\" alt=\"\" width=\"16\" height=\"16\" />"
             : '';
 
+        // The diet pages (Vegetarian / Non-Vegetarian) cut across categories, so they filter by
+        // category; every other category page filters by its own subcategories.
+        $byCategory = in_array((string)($category['slug'] ?? ''), $dietSlugs, true);
+
         $cardsHtml = '';
         foreach ($recipes as $r) {
-            $sub = $this->esc(implode(',', $this->recipeSubSlugs($r, $subNames, $catMap)));
+            $sub = $this->esc($byCategory ? (string)($r['category'] ?? '') : implode(',', $this->recipeSubSlugs($r, $subNames, $catMap)));
             $cardsHtml .= "<div data-subcategory=\"{$sub}\">" . $this->renderRecipeCard($r) . "</div>\n";
         }
 
@@ -1018,15 +1065,26 @@ HTML;
             ? "<p class=\"result-count\" id=\"result-count\" aria-live=\"polite\">{$countLabel}</p>\n<div class=\"cards\" id=\"category-list\">{$cardsHtml}</div>"
             : '<div class="empty-state"><h2>No recipes available yet.</h2><p>Explore other categories to find something delicious.</p><a class="btn" href="/recipes/">All Recipes</a></div>';
 
-        // Subcategory chips: this category's own subcategories that are used by this page's recipes.
+        // Filter chips: this category's own subcategories used by this page's recipes, or on the
+        // diet pages the categories used by this page's recipes.
         $subChips = '';
-        foreach ($subNames as $slug => $name) {
-            if (!in_array((string)$slug, $catMap[(string)($category['slug'] ?? '')] ?? [], true)) continue;
-            $used = array_filter($recipes, fn($r) => in_array((string)$slug, $this->recipeSubSlugs($r, $subNames, $catMap), true));
-            if (!$used) continue;
-            $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc((string)$slug)}\" aria-pressed=\"false\">{$this->esc($name)}</button>\n";
+        if ($byCategory) {
+            foreach ($categories as $c) {
+                $cSlug = (string)($c['slug'] ?? '');
+                if (in_array($cSlug, $dietSlugs, true)) continue;
+                if (!array_filter($recipes, fn($r) => ($r['category'] ?? '') === $cSlug)) continue;
+                $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc($cSlug)}\" aria-pressed=\"false\">{$this->esc((string)$c['name'])}</button>\n";
+            }
+        } else {
+            foreach ($subNames as $slug => $name) {
+                if (!in_array((string)$slug, $catMap[(string)($category['slug'] ?? '')] ?? [], true)) continue;
+                $used = array_filter($recipes, fn($r) => in_array((string)$slug, $this->recipeSubSlugs($r, $subNames, $catMap), true));
+                if (!$used) continue;
+                $subChips .= "<button type=\"button\" class=\"tag-chip\" data-subcategory=\"{$this->esc((string)$slug)}\" aria-pressed=\"false\">{$this->esc($name)}</button>\n";
+            }
         }
-        $subcategoryNav = $subChips === '' ? '' : "<div id=\"subcategory-chips\" class=\"filter-chips\" role=\"group\" aria-label=\"Filter by subcategory\">\n"
+        $filterLabel = $byCategory ? 'Filter by category' : 'Filter by subcategory';
+        $subcategoryNav = $subChips === '' ? '' : "<div id=\"subcategory-chips\" class=\"filter-chips\" role=\"group\" aria-label=\"{$filterLabel}\">\n"
             . "<button type=\"button\" class=\"tag-chip tag-chip-selected\" data-subcategory=\"\" aria-pressed=\"true\">All</button>\n"
             . $subChips . "</div>\n";
         $filterScript = $subChips === '' ? '' : <<<HTML

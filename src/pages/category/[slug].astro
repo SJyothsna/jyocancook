@@ -1,24 +1,28 @@
 ---
 import Base from '../../layouts/Base.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
-import { categories, recipes, subcategories as allSubcategories, type Category } from '../../lib/data';
+import { categories, diets, recipes, subcategories as allSubcategories, type Category } from '../../lib/data';
 
 export function getStaticPaths() {
-  return categories.map((category) => ({ params: { slug: category.slug }, props: { category } }));
+  // Diets (config/diets.json) are not categories, but each gets a page at /category/<diet slug>/ that
+  // lists its recipes, even when no category with that slug is configured.
+  const dietPages: Category[] = diets.map((d) => ({ slug: d.slug, name: d.name, description: `${d.name} recipes`, order: d.order }));
+  const pages = [...categories, ...dietPages.filter((d) => !categories.some((c) => c.slug === d.slug))];
+  return pages.map((category) => ({ params: { slug: category.slug }, props: { category } }));
 }
 
 const { category } = Astro.props as { category: Category };
-const list = recipes.filter(
-  (x) =>
-    x.category === category.slug ||
-    (category.slug === 'vegetarian' && x.diet === 'Vegetarian') ||
-    (category.slug === 'non-vegetarian' && x.diet === 'Non-Vegetarian'),
-);
+const dietName = diets.find((d) => d.slug === category.slug)?.name;
+const list = recipes.filter((x) => x.category === category.slug || (dietName !== undefined && x.diet === dietName));
 
-// Subcategory chips: this category's own subcategories that are used by this page's recipes.
-const subcategories = allSubcategories.filter(
-  (s) => category.subcategories?.includes(s.slug) && list.some((r) => r.subcategories?.includes(s.slug)),
-);
+// The diet pages cut across categories, so they filter by category; other pages by their own subcategories.
+const byCategory = dietName !== undefined;
+const filters: { slug: string; name: string }[] = byCategory
+  ? categories.filter((c) => !diets.some((d) => d.slug === c.slug) && list.some((r) => r.category === c.slug))
+  : allSubcategories.filter(
+      (s) => category.subcategories?.includes(s.slug) && list.some((r) => r.subcategories?.includes(s.slug)),
+    );
+const itemFilter = (r: (typeof recipes)[number]) => (byCategory ? r.category : (r.subcategories ?? []).join(','));
 const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
 ---
 <Base title={category.name} description={category.description}>
@@ -29,10 +33,10 @@ const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
     </span>
     <h1 class="page-title">{category.name}</h1>
     {category.description && <p class="page-lead">{category.description}</p>}
-    {subcategories.length > 0 && (
-      <div id="subcategory-chips" class="filter-chips" role="group" aria-label="Filter by subcategory">
+    {filters.length > 0 && (
+      <div id="subcategory-chips" class="filter-chips" role="group" aria-label={byCategory ? 'Filter by category' : 'Filter by subcategory'}>
         <button type="button" class="tag-chip tag-chip-selected" data-subcategory="" aria-pressed="true">All</button>
-        {subcategories.map((s) => (
+        {filters.map((s) => (
           <button type="button" class="tag-chip" data-subcategory={s.slug} aria-pressed="false">{s.name}</button>
         ))}
       </div>
@@ -41,7 +45,7 @@ const countLabel = (n: number) => `${n} ${n === 1 ? 'recipe' : 'recipes'}`;
       <>
         <p class="result-count" id="result-count" aria-live="polite">{countLabel(list.length)}</p>
         <div class="cards" id="category-list">
-          {list.map((r) => <div data-subcategory={(r.subcategories ?? []).join(',')}><RecipeCard recipe={r} /></div>)}
+          {list.map((r) => <div data-subcategory={itemFilter(r)}><RecipeCard recipe={r} /></div>)}
         </div>
       </>
     ) : (

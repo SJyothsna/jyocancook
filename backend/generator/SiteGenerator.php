@@ -100,6 +100,8 @@ class SiteGenerator {
             $categories = $this->configService->getCategories();
             $tags = $this->configService->getTags();
             $subcategories = $this->configService->getSubcategories();
+            $diets = $this->configService->getDiets();
+            $dietSlugs = array_column($diets, 'slug');
             $this->renderer->setNavMenu($this->configService->getMenu());
 
             if (!$publishedRecipes && !$categories) {
@@ -159,9 +161,23 @@ class SiteGenerator {
                 $cSlug = $this->assertSafeSlug((string)$cat['slug'], 'category');
                 $activeCategorySlugs[] = $cSlug;
                 $catRecipes = $this->recipeService->getRecipesByCategory($cSlug, true);
-                $catHtml = $this->renderer->renderCategoryPage($cat, $catRecipes, $categories, $subcategories);
+                $catHtml = $this->renderer->renderCategoryPage($cat, $catRecipes, $categories, $subcategories, $dietSlugs);
                 $this->writeStagedFile("category/{$cSlug}/index.html", $catHtml);
                 $sitemapUrls[] = ['loc' => $this->siteUrl . "/category/{$cSlug}/", 'changefreq' => 'weekly', 'priority' => '0.7'];
+                $stats['pages_generated']++;
+            }
+
+            // 7b. Diet pages (Diets tab in the admin). /category/<diet slug>/ lists the recipes of
+            //     that diet, so each diet is published even when no category has that slug
+            //     (diets are not categories).
+            foreach ($diets as $diet) {
+                $dSlug = $this->assertSafeSlug((string)$diet['slug'], 'diet');
+                if (in_array($dSlug, $activeCategorySlugs, true)) continue;
+                $activeCategorySlugs[] = $dSlug;
+                $dietPage = ['slug' => $dSlug, 'name' => $diet['name'], 'description' => $diet['name'] . ' recipes', 'image' => ''];
+                $dietRecipes = $this->recipeService->getRecipesByCategory($dSlug, true);
+                $this->writeStagedFile("category/{$dSlug}/index.html", $this->renderer->renderCategoryPage($dietPage, $dietRecipes, $categories, $subcategories, $dietSlugs));
+                $sitemapUrls[] = ['loc' => $this->siteUrl . "/category/{$dSlug}/", 'changefreq' => 'weekly', 'priority' => '0.7'];
                 $stats['pages_generated']++;
             }
 

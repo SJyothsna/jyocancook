@@ -1506,6 +1506,16 @@ main {
   color: var(--primary);
 }
 
+.step-content ul,
+.step-content ol {
+  margin: 0;
+  padding-left: 1.4em;
+  max-width: 680px;
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
 .step-content p {
   margin: 0;
   white-space: pre-line; /* keep the line breaks typed in the admin form */
@@ -2003,6 +2013,30 @@ main {
   background: #b5323f;
   color: var(--white);
   border-color: #b5323f;
+}
+
+.btn-icon-remove.move-up,
+.btn-icon-remove.move-down {
+  color: var(--primary);
+}
+
+.btn-icon-remove.move-up:hover,
+.btn-icon-remove.move-down:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.step-format-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.step-format-row .btn {
+  padding: 4px 12px;
+  font-size: var(--fs-sm);
+  margin: 0;
 }
 
 .step-section-box {

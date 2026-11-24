@@ -6,6 +6,7 @@ declare(strict_types=1);
  */
 
 require_once dirname(__DIR__) . '/config/database.php';
+require_once __DIR__ . '/ConfigService.php';
 
 class RecipeService {
     private PDO $pdo;
@@ -66,9 +67,8 @@ class RecipeService {
     public function getRecipesByCategory(string $categorySlug, bool $publishedOnly = true): array {
         $all = $this->getAllRecipes($publishedOnly);
         return array_values(array_filter($all, function ($r) use ($categorySlug) {
-            return $r['category'] === $categorySlug
-                || ($categorySlug === 'vegetarian' && ($r['diet'] ?? '') === 'Vegetarian')
-                || ($categorySlug === 'non-vegetarian' && ($r['diet'] ?? '') === 'Non-Vegetarian');
+            // A diet page (/category/<diet slug>/) lists the recipes of that diet.
+            return $r['category'] === $categorySlug || self::slugify((string)($r['diet'] ?? '')) === $categorySlug;
         }));
     }
 
@@ -133,9 +133,20 @@ class RecipeService {
         if ($subcategory !== null && strlen($subcategory) > 80) {
             throw new InvalidArgumentException('Too many subcategories selected (limit is 80 characters in total)');
         }
-        $diet = in_array($input['diet'] ?? '', ['Vegetarian', 'Non-Vegetarian', 'Vegan', 'Eggitarian'], true)
-            ? $input['diet']
-            : 'Vegetarian';
+        // The diet must be one of the Diets list (admin Diets tab). A missing diet keeps the old default.
+        $dietNames = array_column((new ConfigService($this->pdo))->getDiets(), 'name');
+        $dietInput = trim((string)($input['diet'] ?? ''));
+        if ($dietInput === '') {
+            $diet = in_array('Vegetarian', $dietNames, true) ? 'Vegetarian' : $dietNames[0];
+        } else {
+            $diet = null;
+            foreach ($dietNames as $dietName) {
+                if (strtolower($dietName) === strtolower($dietInput)) $diet = $dietName;
+            }
+            if ($diet === null) {
+                throw new InvalidArgumentException("Unknown diet '{$dietInput}'. Add it on the Diets tab first.");
+            }
+        }
 
         $nut = $input['nutrition'] ?? [];
         $calories = isset($nut['calories']) && $nut['calories'] !== '' ? max(0, (int)$nut['calories']) : null;

@@ -508,6 +508,22 @@ try {
             }
         }
 
+        // 4c. Diets CRUD (/api/admin/diets)
+        if ($subType === 'diets') {
+            if ($method === 'GET') {
+                sendJson(['data' => $configService->getDiets()]);
+            }
+            if ($method === 'POST') {
+                $body = getJsonBody();
+                $diets = $body['data'] ?? $body;
+                $saved = $configService->saveDiets(is_array($diets) ? $diets : []);
+
+                regenerateAfterSave('admin_diets_update', $privateLogDir);
+
+                sendJson(['ok' => true, 'data' => $saved]);
+            }
+        }
+
         // 5. Tags CRUD (/api/admin/tags)
         if ($subType === 'tags') {
             if ($method === 'GET') {

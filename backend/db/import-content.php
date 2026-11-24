@@ -276,6 +276,45 @@ function importSubcategories(PDO $pdo, string $configDir): int {
     return $added;
 }
 
+/**
+ * Diets (slug + name + order) from <configDir>/diets.json, imported only while the diets table is
+ * empty, so diets edited in the admin are never touched. Any other diet already used by a recipe is
+ * added too, so no recipe is left with a diet that is not in the list. Returns the number added.
+ */
+function importDiets(PDO $pdo, string $configDir): int {
+    if ((int)$pdo->query('SELECT COUNT(*) FROM `diets`')->fetchColumn() > 0) {
+        return 0;
+    }
+    $file = $configDir . '/diets.json';
+    $rows = is_file($file) ? json_decode((string)file_get_contents($file), true) : null;
+    $rows = is_array($rows) ? $rows : [];
+    $known = [];
+    foreach ($rows as $row) {
+        $known[strtolower(trim((string)($row['name'] ?? '')))] = true;
+    }
+    $order = count($rows);
+    foreach ($pdo->query('SELECT DISTINCT `diet` FROM `recipes` ORDER BY `diet`')->fetchAll(PDO::FETCH_COLUMN) as $used) {
+        $used = trim((string)$used);
+        if ($used !== '' && !isset($known[strtolower($used)])) {
+            $rows[] = ['name' => $used, 'order' => ++$order];
+            $known[strtolower($used)] = true;
+        }
+    }
+
+    $stmt = $pdo->prepare('INSERT INTO `diets` (`slug`, `name`, `order_num`) VALUES (:slug, :name, :order_num)');
+    $added = 0;
+    foreach ($rows as $row) {
+        $name = trim((string)($row['name'] ?? ''));
+        $slug = strtolower(trim((string)($row['slug'] ?? ''))) ?: trim(strtolower((string)preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+        if ($name === '' || !preg_match('/^[a-z0-9-]{1,40}$/', $slug)) {
+            continue;
+        }
+        $stmt->execute([':slug' => $slug, ':name' => $name, ':order_num' => (int)($row['order'] ?? 0)]);
+        $added++;
+    }
+    return $added;
+}
+
 /** Seed locations: <backend>/seed when shipped, otherwise the repository (development). */
 function importSeedPaths(?string $seedDir = null): array {
     $seedDir ??= dirname(__DIR__) . '/seed';

@@ -1,4 +1,6 @@
 import { formatQty, parseQty } from '../lib/fractions';
+import { slug as makeSlug } from '../lib/admin-sanitize';
+import { applyListFormat } from '../lib/recipe-text';
 
 type Item = Record<string, any>;
 const el = (id: string) => document.getElementById(id)!;
@@ -22,8 +24,8 @@ function notice(s: string, error = false) {
 
 const UNITS = [
   { value: '', label: 'none' },
-  { value: 'tsp', label: 'tsp' },
-  { value: 'tbsp', label: 'tbsp' },
+  { value: 'tsp', label: 'Tsp' },
+  { value: 'tbsp', label: 'Tbsp' },
   { value: 'cup', label: 'cup' },
   { value: 'g', label: 'g (grams)' },
   { value: 'kg', label: 'kg' },
@@ -72,16 +74,18 @@ async function load() {
   notice('Loading ' + tab + '...');
   try {
     if (tab === 'recipes') {
-      const [recipesRes, categoriesRes, tagsRes, subcategoriesRes] = await Promise.all([
+      const [recipesRes, categoriesRes, tagsRes, subcategoriesRes, dietsRes] = await Promise.all([
         api('recipes'),
         cache.categories ? Promise.resolve(cache.categories) : api('categories').catch(() => ({ data: [] })),
         cache.tags ? Promise.resolve(cache.tags) : api('tags').catch(() => ({ data: [] })),
         cache.subcategories ? Promise.resolve(cache.subcategories) : api('subcategories').catch(() => ({ data: [] })),
+        cache.diets ? Promise.resolve(cache.diets) : api('diets').catch(() => ({ data: [] })),
       ]);
       cache.recipes = recipesRes.data;
       cache.categories = categoriesRes;
       cache.tags = tagsRes;
       cache.subcategories = subcategoriesRes;
+      cache.diets = dietsRes;
     } else {
       cache[tab] = await api(tab);
       if (tab === 'categories') {
@@ -226,6 +230,8 @@ function ingredientRowHtml(item: { name?: string; amount?: number | null | strin
     <select class="ing-unit">
       ${unitOptionsHtml(item.unit || '')}
     </select>
+    <button type="button" class="btn-icon-remove move-up" title="Move ingredient up" aria-label="Move ingredient up">↑</button>
+    <button type="button" class="btn-icon-remove move-down" title="Move ingredient down" aria-label="Move ingredient down">↓</button>
     <button type="button" class="btn-icon-remove remove-ing-row" title="Remove ingredient">✕</button>
   </div>`;
 }
@@ -235,6 +241,8 @@ function ingredientSectionHtml(sec: { title?: string; items?: any[] } = {}) {
   return `<div class="admin-section-box ingredient-section" data-ingredient-section>
     <div class="admin-section-head">
       <input type="text" class="section-title-input" placeholder="Section name (e.g. For Tempering, For Curry, Main Ingredients)" value="${esc(sec.title || '')}" />
+      <button type="button" class="btn-icon-remove move-up" title="Move section up" aria-label="Move section up">↑</button>
+      <button type="button" class="btn-icon-remove move-down" title="Move section down" aria-label="Move section down">↓</button>
       <button type="button" class="btn-icon-danger remove-section" title="Remove section">✕</button>
     </div>
     <div class="ingredient-rows">
@@ -249,7 +257,14 @@ function stepSectionHtml(step: { title?: string; text?: string; image?: string }
   return `<div class="step-section-box" data-step-section>
     <div class="step-section-head">
       <input type="text" class="step-title-input" placeholder="Step / Section Title (e.g. Sauté Onions, Tempering, Simmer)" value="${esc(step.title || '')}" required />
+      <button type="button" class="btn-icon-remove move-up" title="Move step up" aria-label="Move step up">↑</button>
+      <button type="button" class="btn-icon-remove move-down" title="Move step down" aria-label="Move step down">↓</button>
       <button type="button" class="btn-icon-danger remove-step-box" title="Remove step">✕</button>
+    </div>
+    <div class="step-format-row">
+      <button type="button" class="btn btn-light step-format" data-format="ul" title="Turn every line into a bullet point">• Bullets</button>
+      <button type="button" class="btn btn-light step-format" data-format="ol" title="Number every line">1. Numbered</button>
+      <span class="field-note">One instruction per line. Click again to remove the bullets or numbers.</span>
     </div>
     <textarea class="step-text-input" rows="3" placeholder="Detailed instructions for this step..." required>${esc(step.text || '')}</textarea>
     <div class="step-image-row" style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
@@ -320,6 +335,9 @@ function recipeForm(r: any) {
   const selectedSubcategories = new Set<string>(
     Array.isArray(r?.subcategories) ? r.subcategories : r?.subcategory ? [r.subcategory] : [],
   );
+  // The Diets tab list; a recipe whose diet was removed from the list keeps it as an option.
+  const dietNames: string[] = (cache.diets?.data || []).map((d: any) => d.name);
+  if (r?.diet && !dietNames.includes(r.diet)) dietNames.push(r.diet);
   const ingredientSections = groupIngredientsBySection(r?.ingredients);
   const stepsList = r?.steps && r.steps.length ? r.steps : [{ title: '', text: '' }];
 
@@ -364,11 +382,9 @@ function recipeForm(r: any) {
       </div>
     </div>
 
-    <label>Diet<select name="diet"><option ${
-      r?.diet === 'Vegetarian' ? 'selected' : ''
-    }>Vegetarian</option><option ${
-      r?.diet === 'Non-Vegetarian' ? 'selected' : ''
-    }>Non-Vegetarian</option></select></label>
+    <label>Diet<select name="diet" required><option value="" ${r?.diet ? '' : 'selected'}>Choose diet</option>${dietNames
+      .map((d) => `<option value="${esc(d)}" ${r?.diet === d ? 'selected' : ''}>${esc(d)}</option>`)
+      .join('')}</select></label>
     <label>Recipe image<input name="image" id="recipe-image" value="${esc(
       r?.image || '/images/recipes/andhra-chicken-curry.png',
     )}"/></label>
@@ -647,6 +663,29 @@ function wireRecipeForm(r: any) {
   form.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
 
+    // Move an ingredient, ingredient section or instruction section up or down
+    const moveBtn = target.closest<HTMLElement>('.move-up, .move-down');
+    if (moveBtn) {
+      const item = moveBtn.closest<HTMLElement>('.ingredient-row, [data-ingredient-section], [data-step-section]');
+      const up = moveBtn.classList.contains('move-up');
+      const neighbour = up ? item?.previousElementSibling : item?.nextElementSibling;
+      if (item && neighbour) {
+        if (up) neighbour.before(item);
+        else neighbour.after(item);
+        moveBtn.focus();
+      }
+    }
+
+    // Turn every instruction line into a bullet point or a numbered step
+    const formatBtn = target.closest<HTMLElement>('.step-format');
+    if (formatBtn) {
+      const area = formatBtn.closest('[data-step-section]')?.querySelector<HTMLTextAreaElement>('.step-text-input');
+      if (area) {
+        area.value = applyListFormat(area.value, formatBtn.dataset.format === 'ol' ? 'ol' : 'ul');
+        area.focus();
+      }
+    }
+
     // Add row to an ingredient section
     if (target.classList.contains('add-ing-row')) {
       const secBox = target.closest<HTMLElement>('[data-ingredient-section]');
@@ -874,7 +913,7 @@ function renderConfig() {
   const columns =
     tab === 'categories'
       ? ['name', 'slug', 'description', 'image', 'order', 'subcategories']
-      : tab === 'subcategories'
+      : tab === 'subcategories' || tab === 'diets'
         ? ['name', 'slug', 'order']
         : tab === 'menu'
           ? ['label', 'href', 'order', 'visible']
@@ -885,17 +924,19 @@ function renderConfig() {
       ? 'Category image/icon path or upload. Slugs become URLs (e.g. /category/breakfast/). Tick the sub categories each category offers; recipes in that category choose from them.'
       : tab === 'subcategories'
         ? 'Create the shared list of sub categories here, then map them to categories on the Categories tab. Leave the slug empty to create it from the name.'
-        : tab === 'menu'
+        : tab === 'diets'
+          ? 'The diets a recipe can have, such as Vegetarian, Non-Vegetarian or Vegan. Each diet gets a page at /category/vegan/ (using its slug); add it to the Navigation Menu to link to it. Renaming a diet renames it on its recipes, and a diet that recipes still use cannot be removed.'
+          : tab === 'menu'
           ? 'Menu href values must start with /, for example /category/curries/.'
           : 'Enter one tag per line.'
   }</p><form id="config-form" class="admin-form">${
     isTags
       ? `<label>Tags (one per line)<textarea name="tags" rows="12">${esc(list.join('\n'))}</textarea></label>`
-      : `<table class="admin-table"><thead><tr>${columns
+      : `<div style="overflow-x:auto"><table class="admin-table"><thead><tr>${columns
           .map((x) => `<th>${esc(x)}</th>`)
           .join('')}<th></th></tr></thead><tbody id="config-rows">${list
           .map((row: any) => configRow(row, columns))
-          .join('')}</tbody></table><div>${actionButton('Add row', 'add-row')}</div>`
+          .join('')}</tbody></table></div><div>${actionButton('Add row', 'add-row')}</div>`
   }<button type="submit" class="btn">Save ${esc(tabLabel)}</button></form>`;
   content.querySelectorAll('[data-action="add-row"]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -906,6 +947,7 @@ function renderConfig() {
   );
   wireRemove();
   wireCategoryUploads();
+  wireSlugAutofill();
   (el('config-form') as HTMLFormElement).onsubmit = async (e) => {
     e.preventDefault();
     const form = el('config-form') as HTMLFormElement;
@@ -972,9 +1014,27 @@ function configRow(row: Item, columns: string[]) {
           </label>
         </div></td>`;
       }
-      return `<td><input data-key="${k}" value="${esc(row[k] ?? '')}" aria-label="${k}" style="max-width:${k === 'description' ? 220 : 140}px"/></td>`;
+      // The name column keeps a readable width however wide the sub categories column gets.
+      const width = k === 'name' ? 'min-width:200px;max-width:260px' : `max-width:${k === 'description' ? 220 : 140}px`;
+      // A new row's slug follows its name until the slug is typed by hand; saved slugs are never rewritten.
+      const auto = k === 'slug' && !row.slug ? ' data-auto="1" placeholder="from name"' : '';
+      return `<td><input data-key="${k}" value="${esc(row[k] ?? '')}" aria-label="${k}" style="${width}"${auto}/></td>`;
     })
     .join('')}<td><button type="button" class="remove-row">Remove</button></td></tr>`;
+}
+
+// Typing a name fills the slug of a new row (categories, sub categories, diets).
+function wireSlugAutofill() {
+  document.getElementById('config-rows')?.addEventListener('input', (e) => {
+    const input = e.target as HTMLInputElement;
+    const slugInput = input.closest('tr')?.querySelector<HTMLInputElement>('input[data-key="slug"]');
+    if (!slugInput) return;
+    if (input === slugInput) {
+      slugInput.dataset.auto = slugInput.value.trim() ? '0' : '1';
+    } else if (input.dataset.key === 'name' && slugInput.dataset.auto === '1') {
+      slugInput.value = makeSlug(input.value);
+    }
+  });
 }
 
 function wireRemove() {

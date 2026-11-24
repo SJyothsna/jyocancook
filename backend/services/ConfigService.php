@@ -220,6 +220,99 @@ class ConfigService {
         }
     }
 
+    /** The diets used when none are configured yet (diets table missing or empty). */
+    public const DEFAULT_DIETS = [
+        ['slug' => 'vegetarian', 'name' => 'Vegetarian', 'order' => 1],
+        ['slug' => 'non-vegetarian', 'name' => 'Non-Vegetarian', 'order' => 2],
+    ];
+
+    /** Diets (Vegetarian, Non-Vegetarian, Vegan...): rows of slug, name, order. */
+    public function getDiets(): array {
+        try {
+            $rows = $this->pdo->query("SELECT `slug`, `name`, `order_num` AS `order` FROM `diets` ORDER BY `order_num` ASC, `name` ASC")->fetchAll();
+        } catch (PDOException) {
+            return self::DEFAULT_DIETS;
+        }
+        if (!$rows) {
+            return self::DEFAULT_DIETS;
+        }
+        return array_map(static function (array $row): array {
+            $row['order'] = (int)$row['order'];
+            return $row;
+        }, $rows);
+    }
+
+    /**
+     * Saves the list of diets. A recipe stores its diet by name, so renaming a diet renames it on its
+     * recipes too, and a diet that recipes still use cannot be removed.
+     */
+    public function saveDiets(array $diets): array {
+        $clean = [];
+        foreach ($diets as $idx => $item) {
+            $name = trim((string)($item['name'] ?? ''));
+            if ($name === '') continue;
+            if (strlen($name) > 40) {
+                throw new InvalidArgumentException("Diet '{$name}' is too long (40 characters at most)");
+            }
+            $slug = strtolower(trim((string)($item['slug'] ?? '')));
+            if ($slug === '') {
+                $slug = trim(strtolower((string)preg_replace('/[^a-z0-9]+/i', '-', $name)), '-');
+            }
+            if (!preg_match('/^[a-z0-9-]{1,40}$/', $slug)) {
+                throw new InvalidArgumentException("Invalid slug for diet '{$name}' (use letters, digits and hyphens)");
+            }
+            foreach ($clean as $other) {
+                if ($other['slug'] === $slug || strtolower($other['name']) === strtolower($name)) {
+                    throw new InvalidArgumentException("Diet '{$name}' appears twice");
+                }
+            }
+            $clean[] = ['slug' => $slug, 'name' => $name, 'order' => (int)($item['order'] ?? $idx)];
+        }
+        if (!$clean) {
+            throw new InvalidArgumentException('Add at least one diet');
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $newBySlug = [];
+            foreach ($clean as $d) $newBySlug[$d['slug']] = $d;
+            $newNames = array_map(static fn($d) => strtolower($d['name']), $clean);
+
+            // A diet whose name changed (same slug) is renamed on its recipes too.
+            $renames = [];
+            foreach ($this->pdo->query("SELECT `slug`, `name` FROM `diets`")->fetchAll() as $old) {
+                $new = $newBySlug[$old['slug']] ?? null;
+                if ($new !== null && $new['name'] !== $old['name']) {
+                    $renames[$old['name']] = $new['name'];
+                }
+            }
+            // Every diet that recipes use must still be in the list (under its new name if renamed).
+            $usedStmt = $this->pdo->query("SELECT `diet`, COUNT(*) AS `n` FROM `recipes` GROUP BY `diet`");
+            foreach ($usedStmt->fetchAll() as $used) {
+                $name = $renames[$used['diet']] ?? $used['diet'];
+                if (!in_array(strtolower((string)$name), $newNames, true)) {
+                    throw new InvalidArgumentException("Diet '{$used['diet']}' is used by {$used['n']} recipe(s). Change those recipes first, or keep the diet.");
+                }
+            }
+
+            $this->pdo->exec("DELETE FROM `diets`");
+            $insert = $this->pdo->prepare("INSERT INTO `diets` (`slug`, `name`, `order_num`) VALUES (:slug, :name, :order_num)");
+            foreach ($clean as $d) {
+                $insert->execute([':slug' => $d['slug'], ':name' => $d['name'], ':order_num' => $d['order']]);
+            }
+            $rename = $this->pdo->prepare("UPDATE `recipes` SET `diet` = :new_name WHERE `diet` = :old_name");
+            foreach ($renames as $oldName => $newName) {
+                $rename->execute([':new_name' => $newName, ':old_name' => $oldName]);
+            }
+
+            $this->pdo->commit();
+            return $this->getDiets();
+        } catch (Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function getMenu(): array {
         $stmt = $this->pdo->query("SELECT `label`, `href`, `order_num` AS `order`, `visible` FROM `menu_items` ORDER BY `order_num` ASC");
         // The admin UI tests `visible !== false`, so it must be a real boolean (MySQL returns 0/1).

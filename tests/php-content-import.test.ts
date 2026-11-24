@@ -291,6 +291,14 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
       'a sub category the category does not offer is ignored');
   });
 
+  it('the Vegetarian and Non-Vegetarian pages filter by category, not by sub category', async () => {
+    const page = fs.readFileSync(stagingFile('category/non-vegetarian/index.html'), 'utf8');
+    assert.match(page, /aria-label="Filter by category"/);
+    assert.match(page, /data-subcategory="curries" aria-pressed="false">Curries</);
+    assert.match(page, /<div data-subcategory="curries">/);
+    assert.ok(!page.includes('Filter by subcategory'));
+  });
+
   it('publishing creates the same public URLs as the existing site: /recipes/<slug>/, /category/<slug>/, /tag/<slug>/', async () => {
     const r = await post('/api/admin/publish');
     assert.equal(r.httpStatusCode, 200, r.text);
@@ -331,6 +339,62 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.equal(after.published, true);
     assert.match(fs.readFileSync(stagingFile(`recipes/${slug}/index.html`), 'utf8'), /edited on staging/);
     assert.equal(await count('recipes'), 8, 'no duplicate created');
+  });
+
+  it('the recipe page shows Tbsp with a capital and renders bulleted and numbered instructions as lists', async () => {
+    const slug = 'andhra-chicken-curry';
+    const recipe = json(await call(c, 'GET', `/api/admin/recipes/${slug}`)).recipe;
+    recipe.ingredients[0].unit = 'tbsp';
+    recipe.steps[0].text = '\u2022 Heat the oil\n\u2022 Add the onions';
+    recipe.steps[1].text = '1. Add the spices\n2. Stir well';
+    const saved = await post(`/api/admin/recipes/${slug}`, { recipe });
+    assert.equal(saved.httpStatusCode, 200, saved.text);
+
+    const page = fs.readFileSync(stagingFile(`recipes/${slug}/index.html`), 'utf8');
+    assert.match(page, /<\/span> Tbsp /);
+    assert.ok(!/<\/span> tbsp /.test(page), 'the unit is shown as Tbsp');
+    assert.match(page, /<ul><li>Heat the oil<\/li><li>Add the onions<\/li><\/ul>/);
+    assert.match(page, /<ol><li>Add the spices<\/li><li>Stir well<\/li><\/ol>/);
+  });
+
+
+  it('the Diets tab: diets are listed, added, used by recipes, renamed and protected while in use', async () => {
+    const diets = json(await call(c, 'GET', '/api/admin/diets')).data;
+    assert.deepEqual(diets.map((d: { name: string }) => d.name), ['Vegetarian', 'Non-Vegetarian']);
+
+    // Add Vegan, then give a recipe that diet; its page is published at /category/vegan/.
+    const added = await post('/api/admin/diets', { data: [...diets, { name: 'Vegan', order: 3 }] });
+    assert.equal(added.httpStatusCode, 200, added.text);
+    assert.deepEqual(json(added).data.map((d: { slug: string }) => d.slug), ['vegetarian', 'non-vegetarian', 'vegan']);
+
+    const dosa = json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe;
+    dosa.diet = 'Vegan';
+    assert.equal((await post('/api/admin/recipes/masala-dosa', { recipe: dosa })).httpStatusCode, 200);
+    const vegan = fs.readFileSync(stagingFile('category/vegan/index.html'), 'utf8');
+    assert.match(vegan, /Masala Dosa/);
+    assert.match(vegan, /aria-label="Filter by category"/);
+    assert.ok(!fs.readFileSync(stagingFile('category/vegetarian/index.html'), 'utf8').includes('Masala Dosa'), 'a Vegan recipe is not on the Vegetarian page');
+
+    // A diet that is not in the list is refused; a diet that recipes use cannot be removed.
+    dosa.diet = 'Pescatarian';
+    const unknown = await post('/api/admin/recipes/masala-dosa', { recipe: dosa });
+    assert.equal(unknown.httpStatusCode, 400, unknown.text);
+    const removed = await post('/api/admin/diets', { data: diets });
+    assert.equal(removed.httpStatusCode, 400, removed.text);
+    assert.match(removed.text, /Vegan.*used by 1 recipe/);
+
+    // Renaming keeps the slug and renames the diet on its recipes.
+    const renamed = await post('/api/admin/diets', {
+      data: [...diets, { name: 'Plant-based', slug: 'vegan', order: 3 }],
+    });
+    assert.equal(renamed.httpStatusCode, 200, renamed.text);
+    assert.equal(json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe.diet, 'Plant-based');
+
+    // Put the recipe back and remove the extra diet again.
+    dosa.diet = 'Vegetarian';
+    assert.equal((await post('/api/admin/recipes/masala-dosa', { recipe: dosa })).httpStatusCode, 200);
+    assert.equal((await post('/api/admin/diets', { data: diets })).httpStatusCode, 200);
+    assert.ok(!fs.existsSync(stagingFile('category/vegan/index.html')), 'the page of a removed diet is removed');
   });
 
   it('saving the Tags tab keeps every recipe-tag link', async () => {
