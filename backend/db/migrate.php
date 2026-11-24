@@ -42,6 +42,12 @@ function runMigration(?PDO $pdo = null): array {
         if ((int)$hasSub === 0) {
             $pdo->exec("ALTER TABLE `recipes` ADD COLUMN `subcategory_slug` VARCHAR(80) NULL AFTER `category_slug`");
         }
+
+        // A recipe can have several diets (comma-separated in recipes.diet): widen the column created at 40.
+        $dietLen = $pdo->query("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'recipes' AND COLUMN_NAME = 'diet'")->fetchColumn();
+        if ($dietLen !== false && (int)$dietLen < 120) {
+            $pdo->exec("ALTER TABLE `recipes` MODIFY `diet` VARCHAR(120) NOT NULL DEFAULT 'Vegetarian'");
+        }
     } else {
         throw new RuntimeException("schema.sql not found at {$schemaFile}");
     }

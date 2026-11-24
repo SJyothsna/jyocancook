@@ -30,7 +30,7 @@ require_once dirname(__DIR__) . '/services/RecipeService.php';
 
 /** Recipe JSON keys that map to MySQL columns / child tables. Any other key is reported. */
 const IMPORT_KNOWN_RECIPE_KEYS = [
-    'slug', 'title', 'description', 'category', 'subcategories', 'subcategory', 'tags', 'diet', 'prepTime', 'cookTime', 'servings',
+    'slug', 'title', 'description', 'category', 'subcategories', 'subcategory', 'tags', 'diet', 'diets', 'prepTime', 'cookTime', 'servings',
     'difficulty', 'image', 'published', 'featured', 'publishedAt', 'story', 'youtubeUrl', 'nutrition',
     'ingredients', 'steps', 'tips', 'serveWith',
 ];
@@ -293,11 +293,14 @@ function importDiets(PDO $pdo, string $configDir): int {
         $known[strtolower(trim((string)($row['name'] ?? '')))] = true;
     }
     $order = count($rows);
-    foreach ($pdo->query('SELECT DISTINCT `diet` FROM `recipes` ORDER BY `diet`')->fetchAll(PDO::FETCH_COLUMN) as $used) {
-        $used = trim((string)$used);
-        if ($used !== '' && !isset($known[strtolower($used)])) {
-            $rows[] = ['name' => $used, 'order' => ++$order];
-            $known[strtolower($used)] = true;
+    foreach ($pdo->query('SELECT DISTINCT `diet` FROM `recipes` ORDER BY `diet`')->fetchAll(PDO::FETCH_COLUMN) as $stored) {
+        // A recipe stores several diets comma-separated.
+        foreach (explode(',', (string)$stored) as $used) {
+            $used = trim($used);
+            if ($used !== '' && !isset($known[strtolower($used)])) {
+                $rows[] = ['name' => $used, 'order' => ++$order];
+                $known[strtolower($used)] = true;
+            }
         }
     }
 

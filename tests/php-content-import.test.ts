@@ -386,15 +386,23 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
     assert.deepEqual(json(added).data.map((d: { slug: string }) => d.slug), ['vegetarian', 'non-vegetarian', 'vegan']);
 
     const dosa = json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe;
-    dosa.diet = 'Vegan';
+    dosa.diets = ['Vegan'];
     assert.equal((await post('/api/admin/recipes/masala-dosa', { recipe: dosa })).httpStatusCode, 200);
     const vegan = fs.readFileSync(stagingFile('category/vegan/index.html'), 'utf8');
     assert.match(vegan, /Masala Dosa/);
     assert.match(vegan, /aria-label="Filter by category"/);
     assert.ok(!fs.readFileSync(stagingFile('category/vegetarian/index.html'), 'utf8').includes('Masala Dosa'), 'a Vegan recipe is not on the Vegetarian page');
 
+    // A recipe can have several diets: it is listed on each diet page and shows them all, in the Diets tab order.
+    dosa.diets = ['Vegan', 'Vegetarian'];
+    assert.equal((await post('/api/admin/recipes/masala-dosa', { recipe: dosa })).httpStatusCode, 200);
+    assert.deepEqual(json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe.diets, ['Vegetarian', 'Vegan']);
+    assert.match(fs.readFileSync(stagingFile('category/vegan/index.html'), 'utf8'), /Masala Dosa/);
+    assert.match(fs.readFileSync(stagingFile('category/vegetarian/index.html'), 'utf8'), /Masala Dosa/);
+    assert.match(fs.readFileSync(stagingFile('recipes/index.html'), 'utf8'), /data-title="masala dosa"[^>]*data-diet="vegetarian,vegan"/);
+
     // A diet that is not in the list is refused; a diet that recipes use cannot be removed.
-    dosa.diet = 'Pescatarian';
+    dosa.diets = ['Pescatarian'];
     const unknown = await post('/api/admin/recipes/masala-dosa', { recipe: dosa });
     assert.equal(unknown.httpStatusCode, 400, unknown.text);
     const removed = await post('/api/admin/diets', { data: diets });
@@ -406,10 +414,10 @@ describe('Importing the Hostinger-branch content into the staging database (WASM
       data: [...diets, { name: 'Plant-based', slug: 'vegan', order: 3 }],
     });
     assert.equal(renamed.httpStatusCode, 200, renamed.text);
-    assert.equal(json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe.diet, 'Plant-based');
+    assert.deepEqual(json(await call(c, 'GET', '/api/admin/recipes/masala-dosa')).recipe.diets, ['Vegetarian', 'Plant-based']);
 
     // Put the recipe back and remove the extra diet again.
-    dosa.diet = 'Vegetarian';
+    dosa.diets = ['Vegetarian'];
     assert.equal((await post('/api/admin/recipes/masala-dosa', { recipe: dosa })).httpStatusCode, 200);
     assert.equal((await post('/api/admin/diets', { data: diets })).httpStatusCode, 200);
     assert.ok(!fs.existsSync(stagingFile('category/vegan/index.html')), 'the page of a removed diet is removed');

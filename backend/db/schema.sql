@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `category_subcategories` (
   PRIMARY KEY (`category_slug`, `subcategory_slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2d. Diets (Vegetarian, Non-Vegetarian, Vegan...). A recipe stores the diet name in recipes.diet.
+-- 2d. Diets (Vegetarian, Non-Vegetarian, Vegan...). A recipe stores its diet names, comma-separated, in recipes.diet.
 CREATE TABLE IF NOT EXISTS `diets` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `slug` VARCHAR(40) NOT NULL UNIQUE,
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS `recipes` (
   `description` VARCHAR(1000) NOT NULL DEFAULT '',
   `category_slug` VARCHAR(80) NOT NULL,
   `subcategory_slug` VARCHAR(80) NULL,
-  `diet` VARCHAR(40) NOT NULL DEFAULT 'Vegetarian',
+  `diet` VARCHAR(120) NOT NULL DEFAULT 'Vegetarian',
   `prep_time` INT UNSIGNED NOT NULL DEFAULT 15,
   `cook_time` INT UNSIGNED NOT NULL DEFAULT 30,
   `servings` INT UNSIGNED NOT NULL DEFAULT 4,

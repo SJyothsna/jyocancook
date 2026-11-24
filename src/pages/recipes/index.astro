@@ -3,10 +3,10 @@ import Base from '../../layouts/Base.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
 import { recipes, subcategoryName, diets } from '../../lib/data';
 const subcategories = [...new Set(recipes.flatMap((r) => r.subcategories ?? []))];
-const dietSlug = (name: string) => diets.find((d) => d.name === name)?.slug ?? '';
-const usedDiets = diets.filter((d) => recipes.some((r) => r.diet === d.name));
+const dietSlugs = (names: string[]) => names.map((n) => diets.find((d) => d.name === n)?.slug ?? '').filter(Boolean).join(',');
+const usedDiets = diets.filter((d) => recipes.some((r) => r.diets.includes(d.name)));
 ---
-<Base title="All Recipes"><div class="container section"><span class="eyebrow">Recipe collection</span><h1>Find your next favourite</h1><p class="muted">Browse our recipes or filter by diet, subcategory and name.</p><div class="filterbar"><input id="filter-text" placeholder="Filter recipes by name or ingredient..." aria-label="Filter recipes"/></div>{usedDiets.length > 0 && <div id="diet-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px" role="group" aria-label="Filter by diet"><button type="button" class="tag-chip tag-chip-selected" data-diet="" aria-pressed="true">All diets</button>{usedDiets.map((d) => <button type="button" class="tag-chip" data-diet={d.slug} aria-pressed="false">{d.name}</button>)}</div>}<div id="subcategory-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px" role="group" aria-label="Filter by subcategory"><button type="button" class="tag-chip tag-chip-selected" data-subcategory="" aria-pressed="true">All</button>{subcategories.map((s) => <button type="button" class="tag-chip" data-subcategory={s} aria-pressed="false">{subcategoryName(s)}</button>)}</div><div class="cards" id="recipe-list">{recipes.map((r) => <div data-title={r.title.toLowerCase()} data-ingredients={r.ingredients.map((x) => x.name).join(' ').toLowerCase()} data-subcategory={(r.subcategories ?? []).join(',')} data-diet={dietSlug(r.diet)}><RecipeCard recipe={r}/></div>)}</div><p class="empty hidden" id="filter-empty">No recipes match your filters.</p><p class="muted" style="margin-top:20px"><span id="recipe-count">{recipes.length}</span> recipes shown</p></div><script>
+<Base title="All Recipes"><div class="container section"><span class="eyebrow">Recipe collection</span><h1>Find your next favourite</h1><p class="muted">Browse our recipes or filter by diet, subcategory and name.</p><div class="filterbar"><input id="filter-text" placeholder="Filter recipes by name or ingredient..." aria-label="Filter recipes"/></div>{usedDiets.length > 0 && <div id="diet-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px" role="group" aria-label="Filter by diet"><button type="button" class="tag-chip tag-chip-selected" data-diet="" aria-pressed="true">All diets</button>{usedDiets.map((d) => <button type="button" class="tag-chip" data-diet={d.slug} aria-pressed="false">{d.name}</button>)}</div>}<div id="subcategory-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px" role="group" aria-label="Filter by subcategory"><button type="button" class="tag-chip tag-chip-selected" data-subcategory="" aria-pressed="true">All</button>{subcategories.map((s) => <button type="button" class="tag-chip" data-subcategory={s} aria-pressed="false">{subcategoryName(s)}</button>)}</div><div class="cards" id="recipe-list">{recipes.map((r) => <div data-title={r.title.toLowerCase()} data-ingredients={r.ingredients.map((x) => x.name).join(' ').toLowerCase()} data-subcategory={(r.subcategories ?? []).join(',')} data-diet={dietSlugs(r.diets)}><RecipeCard recipe={r}/></div>)}</div><p class="empty hidden" id="filter-empty">No recipes match your filters.</p><p class="muted" style="margin-top:20px"><span id="recipe-count">{recipes.length}</span> recipes shown</p></div><script>
 const text = document.querySelector<HTMLInputElement>('#filter-text')!;
 const chips = [...document.querySelectorAll<HTMLButtonElement>('#subcategory-chips .tag-chip')];
 const dietChips = [...document.querySelectorAll<HTMLButtonElement>('#diet-chips .tag-chip')];
@@ -20,7 +20,7 @@ function filter() {
     const ok =
       (!q || `${el.dataset.title} ${el.dataset.ingredients}`.includes(q)) &&
       (!activeSub || (el.dataset.subcategory ?? '').split(',').includes(activeSub)) &&
-      (!activeDiet || el.dataset.diet === activeDiet);
+      (!activeDiet || (el.dataset.diet ?? '').split(',').includes(activeDiet));
     el.classList.toggle('hidden', !ok);
     if (ok) n++;
   }

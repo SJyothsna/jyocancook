@@ -202,7 +202,7 @@ class SiteGenerator {
                     'url' => '/recipes/' . $r['slug'] . '/',
                     'description' => $r['description'] ?? '',
                     'category' => $r['category_name'] ?? $r['category'],
-                    'diet' => $r['diet'] ?? 'Vegetarian',
+                    'diets' => $r['diets'] ?? ['Vegetarian'],
                     'tags' => $r['tags'] ?? [],
                     'ingredients' => array_column($r['ingredients'] ?? [], 'name'),
                     'image' => $r['image'] ?? '/images/recipes/recipe-placeholder.svg',

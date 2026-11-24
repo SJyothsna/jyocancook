@@ -18,7 +18,7 @@ const scored = recipes
   .map((x) => {
     let score = 0;
     if (x.category === recipe.category) score += 3;
-    if (x.diet === recipe.diet) score += 1;
+    if (x.diets.some((d) => recipe.diets.includes(d))) score += 1;
     (x.tags || []).forEach((t) => {
       if (recipeTagSet.has(t.toLowerCase())) score += 2;
     });

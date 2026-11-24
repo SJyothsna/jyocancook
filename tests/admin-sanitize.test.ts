@@ -11,7 +11,7 @@ describe('Recipe and Configuration Sanitization', () => {
       subcategories: ['Rice Dishes', 'Vegetarian', 'rice-dishes'],
       story: 'A wonderful homestyle kurma recipe passed down through generations.',
       tags: ['Chicken', 'Dinner'],
-      diet: 'Non-Vegetarian',
+      diets: ['Vegetarian', 'Vegan', 'Vegan', ''],
       prepTime: '15',
       cookTime: '35',
       servings: '4',
@@ -35,12 +35,19 @@ describe('Recipe and Configuration Sanitization', () => {
 
     assert.strictEqual(sanitized.slug, 'chicken-kurma-restaurant-style');
     assert.deepStrictEqual(sanitized.subcategories, ['rice-dishes', 'vegetarian']);
+    assert.deepStrictEqual(sanitized.diets, ['Vegetarian', 'Vegan']);
     assert.strictEqual(sanitized.story, 'A wonderful homestyle kurma recipe passed down through generations.');
     assert.strictEqual(sanitized.nutrition?.calories, 380);
     assert.strictEqual(sanitized.nutrition?.carbs, 22.5);
     assert.strictEqual(sanitized.nutrition?.protein, 28.1);
     assert.strictEqual(sanitized.ingredients[0].section, 'Main');
     assert.strictEqual(sanitized.steps[0].image, '/images/recipes/step1.jpg');
+  });
+
+  it('a recipe has one or more diets; the older single diet value is still accepted', () => {
+    const base = { title: 'Dosa', slug: 'dosa', category: 'breakfast', ingredients: [{ name: 'Rice', amount: 1, unit: 'cup' }], steps: [{ title: 'a', text: 'b' }] };
+    assert.deepStrictEqual(sanitizeRecipe({ ...base, diet: 'Vegan' }).diets, ['Vegan']);
+    assert.deepStrictEqual(sanitizeRecipe(base).diets, ['Vegetarian']);
   });
 
   it('sub categories are a plain list of unique slugs, with no category', () => {

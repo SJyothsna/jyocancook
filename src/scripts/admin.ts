@@ -335,9 +335,13 @@ function recipeForm(r: any) {
   const selectedSubcategories = new Set<string>(
     Array.isArray(r?.subcategories) ? r.subcategories : r?.subcategory ? [r.subcategory] : [],
   );
-  // The Diets tab list; a recipe whose diet was removed from the list keeps it as an option.
+  // The Diets tab list. A recipe can have several diets (Vegetarian and Vegan, say); a recipe file with
+  // the older single `diet` value still works, and a diet removed from the list stays ticked until unticked.
   const dietNames: string[] = (cache.diets?.data || []).map((d: any) => d.name);
-  if (r?.diet && !dietNames.includes(r.diet)) dietNames.push(r.diet);
+  const selectedDiets: string[] = Array.isArray(r?.diets) ? r.diets : r?.diet ? [r.diet] : [];
+  selectedDiets.forEach((d) => {
+    if (!dietNames.includes(d)) dietNames.push(d);
+  });
   const ingredientSections = groupIngredientsBySection(r?.ingredients);
   const stepsList = r?.steps && r.steps.length ? r.steps : [{ title: '', text: '' }];
 
@@ -382,9 +386,15 @@ function recipeForm(r: any) {
       </div>
     </div>
 
-    <label>Diet<select name="diet" required><option value="" ${r?.diet ? '' : 'selected'}>Choose diet</option>${dietNames
-      .map((d) => `<option value="${esc(d)}" ${r?.diet === d ? 'selected' : ''}>${esc(d)}</option>`)
-      .join('')}</select></label>
+    <fieldset id="recipe-diets" style="border:0;padding:0;margin:12px 0">
+      <legend style="font-weight:600;margin-bottom:6px">Diet (select all that apply)</legend>
+      <div style="display:flex;flex-wrap:wrap;gap:4px 18px">${dietNames
+        .map(
+          (d) =>
+            `<label style="display:inline-flex;flex-direction:row;align-items:center;gap:6px;margin:0;font-weight:400"><input type="checkbox" name="diets" value="${esc(d)}" ${selectedDiets.includes(d) ? 'checked' : ''}/> ${esc(d)}</label>`,
+        )
+        .join('')}</div>
+    </fieldset>
     <label>Recipe image<input name="image" id="recipe-image" value="${esc(
       r?.image || '/images/recipes/andhra-chicken-curry.png',
     )}"/></label>
@@ -526,7 +536,7 @@ function formData(f: HTMLFormElement, existing?: any) {
       .map((chip) => chip.getAttribute('data-tag')?.trim() || '')
       .filter(Boolean),
     story: text('story') || undefined,
-    diet: text('diet'),
+    diets: Array.from(f.querySelectorAll<HTMLInputElement>('#recipe-diets input:checked')).map((i) => i.value),
     prepTime: Number(text('prepTime')),
     cookTime: Number(text('cookTime')),
     servings: Number(text('servings')),
@@ -818,6 +828,10 @@ function wireRecipeForm(r: any) {
       notice('Choose a category first.', true);
       return;
     }
+    if (!value.diets.length) {
+      notice('Choose at least one diet.', true);
+      return;
+    }
     if (!value.ingredients.length) {
       notice('Please add at least one ingredient.', true);
       return;
@@ -910,6 +924,8 @@ function renderConfig() {
   const entry = cache[tab],
     list = entry?.data || [];
   const isTags = tab === 'tags';
+  // Rows with an order are shown in that order; the arrows then move a row and the new position is saved.
+  if (!isTags) list.sort((a: Item, b: Item) => Number(a.order ?? 0) - Number(b.order ?? 0));
   const columns =
     tab === 'categories'
       ? ['name', 'slug', 'description', 'image', 'order', 'subcategories']
@@ -948,13 +964,15 @@ function renderConfig() {
   wireRemove();
   wireCategoryUploads();
   wireSlugAutofill();
+  wireRowMoves();
   (el('config-form') as HTMLFormElement).onsubmit = async (e) => {
     e.preventDefault();
     const form = el('config-form') as HTMLFormElement;
     const data = isTags
       ? lines((form.elements.namedItem('tags') as HTMLTextAreaElement).value)
-      : [...form.querySelectorAll<HTMLTableRowElement>('#config-rows tr')].map((tr) => {
+      : [...form.querySelectorAll<HTMLTableRowElement>('#config-rows tr')].map((tr, index) => {
           const o: Item = {};
+          if (columns.includes('order')) o.order = index + 1;
           tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input[data-key], select[data-key]').forEach((field) => {
             const k = field.dataset.key!;
             o[k] =
@@ -989,7 +1007,7 @@ function configRow(row: Item, columns: string[]) {
         return `<td><input data-key="visible" type="checkbox" ${row[k] !== false ? 'checked' : ''} aria-label="visible" /></td>`;
       }
       if (k === 'order') {
-        return `<td><input data-key="order" type="number" value="${esc(row[k] ?? 0)}" aria-label="order" style="max-width:80px" /></td>`;
+        return `<td style="white-space:nowrap"><button type="button" class="btn-icon-remove move-up" title="Move up" aria-label="Move row up">↑</button> <button type="button" class="btn-icon-remove move-down" title="Move down" aria-label="Move row down">↓</button></td>`;
       }
       if (k === 'subcategories') {
         const chosen: string[] = Array.isArray(row.subcategories) ? row.subcategories : [];
@@ -1034,6 +1052,21 @@ function wireSlugAutofill() {
     } else if (input.dataset.key === 'name' && slugInput.dataset.auto === '1') {
       slugInput.value = makeSlug(input.value);
     }
+  });
+}
+
+// The ↑/↓ arrows move a row of the config table; the saved order follows the row positions.
+function wireRowMoves() {
+  document.getElementById('config-rows')?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('.move-up, .move-down');
+    const tr = btn?.closest('tr');
+    if (!btn || !tr) return;
+    if (btn.classList.contains('move-up')) {
+      if (tr.previousElementSibling) tr.parentElement!.insertBefore(tr, tr.previousElementSibling);
+    } else if (tr.nextElementSibling) {
+      tr.parentElement!.insertBefore(tr.nextElementSibling, tr);
+    }
+    btn.focus();
   });
 }
 

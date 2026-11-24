@@ -242,9 +242,14 @@ class ConfigService {
         }, $rows);
     }
 
+    /** The diets of a stored value: comma-separated names in the recipes.diet column. */
+    public static function splitDiets(string $stored): array {
+        return array_values(array_filter(array_map('trim', explode(',', $stored)), static fn($d) => $d !== ''));
+    }
+
     /**
-     * Saves the list of diets. A recipe stores its diet by name, so renaming a diet renames it on its
-     * recipes too, and a diet that recipes still use cannot be removed.
+     * Saves the list of diets. A recipe stores its diets by name (comma-separated), so renaming a diet
+     * renames it on its recipes too, and a diet that recipes still use cannot be removed.
      */
     public function saveDiets(array $diets): array {
         $clean = [];
@@ -253,6 +258,9 @@ class ConfigService {
             if ($name === '') continue;
             if (strlen($name) > 40) {
                 throw new InvalidArgumentException("Diet '{$name}' is too long (40 characters at most)");
+            }
+            if (str_contains($name, ',')) {
+                throw new InvalidArgumentException("Diet '{$name}' cannot contain a comma");
             }
             $slug = strtolower(trim((string)($item['slug'] ?? '')));
             if ($slug === '') {
@@ -287,12 +295,22 @@ class ConfigService {
                 }
             }
             // Every diet that recipes use must still be in the list (under its new name if renamed).
-            $usedStmt = $this->pdo->query("SELECT `diet`, COUNT(*) AS `n` FROM `recipes` GROUP BY `diet`");
-            foreach ($usedStmt->fetchAll() as $used) {
-                $name = $renames[$used['diet']] ?? $used['diet'];
-                if (!in_array(strtolower((string)$name), $newNames, true)) {
-                    throw new InvalidArgumentException("Diet '{$used['diet']}' is used by {$used['n']} recipe(s). Change those recipes first, or keep the diet.");
+            // A recipe stores several diets comma-separated, so each one is checked and renamed.
+            $recipeDiets = [];
+            $usedCount = [];
+            $recipeRows = $this->pdo->query("SELECT `id`, `diet` FROM `recipes`")->fetchAll();
+            foreach ($recipeRows as $recipe) {
+                foreach (self::splitDiets((string)$recipe['diet']) as $n) $usedCount[$n] = ($usedCount[$n] ?? 0) + 1;
+            }
+            foreach ($recipeRows as $recipe) {
+                $names = self::splitDiets((string)$recipe['diet']);
+                $renamed = array_map(static fn($n) => $renames[$n] ?? $n, $names);
+                foreach ($names as $i => $n) {
+                    if (!in_array(strtolower($renamed[$i]), $newNames, true)) {
+                        throw new InvalidArgumentException("Diet '{$n}' is used by {$usedCount[$n]} recipe(s). Change those recipes first, or keep the diet.");
+                    }
                 }
+                if ($renamed !== $names) $recipeDiets[(int)$recipe['id']] = implode(',', $renamed);
             }
 
             $this->pdo->exec("DELETE FROM `diets`");
@@ -300,9 +318,9 @@ class ConfigService {
             foreach ($clean as $d) {
                 $insert->execute([':slug' => $d['slug'], ':name' => $d['name'], ':order_num' => $d['order']]);
             }
-            $rename = $this->pdo->prepare("UPDATE `recipes` SET `diet` = :new_name WHERE `diet` = :old_name");
-            foreach ($renames as $oldName => $newName) {
-                $rename->execute([':new_name' => $newName, ':old_name' => $oldName]);
+            $rename = $this->pdo->prepare("UPDATE `recipes` SET `diet` = :diet WHERE `id` = :id");
+            foreach ($recipeDiets as $id => $diet) {
+                $rename->execute([':diet' => $diet, ':id' => $id]);
             }
 
             $this->pdo->commit();

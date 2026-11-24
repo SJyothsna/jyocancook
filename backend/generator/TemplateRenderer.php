@@ -311,10 +311,15 @@ HTML;
         return $html;
     }
 
+    /** The diet slugs of a recipe, comma-separated for a data-diet attribute. */
+    private function dietSlugList(array $recipe): string {
+        return implode(',', array_map(static fn($d) => RecipeService::slugify((string)$d), $recipe['diets'] ?? []));
+    }
+
     public function renderRecipeCard(array $recipe): string {
         $url = '/recipes/' . $recipe['slug'] . '/';
         $totalTime = ($recipe['prepTime'] ?? 0) + ($recipe['cookTime'] ?? 0);
-        $dietHtml = !empty($recipe['diet']) ? ' · ' . $this->esc($recipe['diet']) : '';
+        $dietHtml = !empty($recipe['diets']) ? ' · ' . $this->esc(implode(', ', $recipe['diets'])) : '';
         $categoryName = $recipe['category_name'] ?? ucfirst($recipe['category'] ?? '');
 
         return <<<HTML
@@ -354,7 +359,7 @@ HTML;
             if ($r['slug'] === $recipe['slug']) continue;
             $score = 0;
             if (($r['category'] ?? '') === $categorySlug) $score += 3;
-            if (($r['diet'] ?? '') === ($recipe['diet'] ?? '')) $score += 1;
+            if (array_intersect($r['diets'] ?? [], $recipe['diets'] ?? [])) $score += 1;
             $rTags = array_map('strtolower', $r['tags'] ?? []);
             foreach ($rTags as $t) {
                 if (in_array($t, $recipeTagSet, true)) $score += 2;
@@ -950,7 +955,9 @@ HTML;
         // Diet chips: the configured diets (in the Diets tab order) that have at least one recipe here.
         $usedDiets = [];
         foreach ($recipes as $r) {
-            $usedDiets[RecipeService::slugify((string)($r['diet'] ?? ''))] = (string)($r['diet'] ?? '');
+            foreach ($r['diets'] ?? [] as $dietName) {
+                $usedDiets[RecipeService::slugify((string)$dietName)] = (string)$dietName;
+            }
         }
         $dietChips = '';
         foreach ($diets as $d) {
@@ -970,7 +977,7 @@ HTML;
             $subSlug = implode(',', $subSlugs);
             $card = $this->renderRecipeCard($r);
 
-            $dietSlug = RecipeService::slugify((string)($r['diet'] ?? ''));
+            $dietSlug = $this->dietSlugList($r);
             $cardsHtml .= "<div data-title=\"{$this->esc($tLower)}\" data-ingredients=\"{$this->esc($ingNames)}\" data-subcategory=\"{$this->esc($subSlug)}\" data-diet=\"{$this->esc($dietSlug)}\">{$card}</div>\n";
         }
 
@@ -1025,7 +1032,7 @@ HTML;
 
         var ok = (!q || (t + ' ' + ing).indexOf(q) !== -1)
           && (!activeSub || s.indexOf(activeSub) !== -1)
-          && (!activeDiet || el.getAttribute('data-diet') === activeDiet);
+          && (!activeDiet || (el.getAttribute('data-diet') || '').split(',').indexOf(activeDiet) !== -1);
 
         el.classList.toggle('hidden', !ok);
         if (ok) n++;
@@ -1098,8 +1105,10 @@ HTML;
         $usedDiets = [];
         foreach ($recipes as $r) {
             $sub = $this->esc($byCategory ? (string)($r['category'] ?? '') : implode(',', $this->recipeSubSlugs($r, $subNames, $catMap)));
-            $dietSlug = RecipeService::slugify((string)($r['diet'] ?? ''));
-            $usedDiets[$dietSlug] = true;
+            $dietSlug = $this->dietSlugList($r);
+            foreach ($r['diets'] ?? [] as $dietName) {
+                $usedDiets[RecipeService::slugify((string)$dietName)] = true;
+            }
             $cardsHtml .= "<div data-subcategory=\"{$sub}\" data-diet=\"{$this->esc($dietSlug)}\">" . $this->renderRecipeCard($r) . "</div>\n";
         }
 
@@ -1324,7 +1333,7 @@ HTML;
             '<p class="muted" style="font-size:0.85rem;margin:4px 0 8px;">' + (r.description || '') + '</p>' +
             '<div class="recipe-card-meta">' +
               '<span>' + r.category + '</span>' +
-              (r.diet ? '<span> • ' + r.diet + '</span>' : '') +
+              (r.diets && r.diets.length ? '<span> • ' + r.diets.join(', ') + '</span>' : '') +
             '</div>' +
           '</div>';
 

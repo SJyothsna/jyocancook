@@ -60,6 +60,11 @@ export function sanitizeRecipe(r: any) {
   const rawSubcategories = Array.isArray(r.subcategories) ? r.subcategories : r.subcategory ? [r.subcategory] : [];
   const subcategories: string[] = [...new Set<string>(rawSubcategories.map((s: any) => slug(String(s))).filter(Boolean))].slice(0, 12);
 
+  // One or more diets (Vegetarian and Vegan, say); a single legacy `diet` value is still accepted.
+  const rawDiets = Array.isArray(r.diets) ? r.diets : r.diet ? [r.diet] : [];
+  const dietList: string[] = [...new Set<string>(rawDiets.map((d: any) => String(d).replace(/,/g, ' ').trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
+  const diets = dietList.length ? dietList : ['Vegetarian'];
+
   return {
     slug: id,
     title,
@@ -67,7 +72,7 @@ export function sanitizeRecipe(r: any) {
     category: slug(String(r.category || '')),
     ...(subcategories.length ? { subcategories } : {}),
     tags: Array.isArray(r.tags) ? r.tags.slice(0, 30).map((t: any) => String(t).slice(0, 60)) : [],
-    diet: String(r.diet || 'Vegetarian').slice(0, 40),
+    diets,
     prepTime: Math.max(0, Math.min(10000, Number(r.prepTime) || 0)),
     cookTime: Math.max(0, Math.min(10000, Number(r.cookTime) || 0)),
     servings: Math.max(1, Math.min(100, Number(r.servings) || 4)),

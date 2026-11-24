@@ -67,8 +67,12 @@ class RecipeService {
     public function getRecipesByCategory(string $categorySlug, bool $publishedOnly = true): array {
         $all = $this->getAllRecipes($publishedOnly);
         return array_values(array_filter($all, function ($r) use ($categorySlug) {
-            // A diet page (/category/<diet slug>/) lists the recipes of that diet.
-            return $r['category'] === $categorySlug || self::slugify((string)($r['diet'] ?? '')) === $categorySlug;
+            // A diet page (/category/<diet slug>/) lists the recipes that have that diet.
+            if ($r['category'] === $categorySlug) return true;
+            foreach ($r['diets'] ?? [] as $diet) {
+                if (self::slugify((string)$diet) === $categorySlug) return true;
+            }
+            return false;
         }));
     }
 
@@ -133,19 +137,30 @@ class RecipeService {
         if ($subcategory !== null && strlen($subcategory) > 80) {
             throw new InvalidArgumentException('Too many subcategories selected (limit is 80 characters in total)');
         }
-        // The diet must be one of the Diets list (admin Diets tab). A missing diet keeps the old default.
+        // A recipe has one or more diets (Vegetarian and Vegan, say), each from the Diets list (admin
+        // Diets tab). They are stored comma-separated, in the order of that list. No diet keeps the old
+        // default. The legacy single "diet" string is still accepted.
         $dietNames = array_column((new ConfigService($this->pdo))->getDiets(), 'name');
-        $dietInput = trim((string)($input['diet'] ?? ''));
-        if ($dietInput === '') {
-            $diet = in_array('Vegetarian', $dietNames, true) ? 'Vegetarian' : $dietNames[0];
-        } else {
-            $diet = null;
+        $chosenDiets = [];
+        foreach ((array)($input['diets'] ?? ($input['diet'] ?? [])) as $dietItem) {
+            $dietItem = trim((string)$dietItem);
+            if ($dietItem === '') continue;
+            $matched = null;
             foreach ($dietNames as $dietName) {
-                if (strtolower($dietName) === strtolower($dietInput)) $diet = $dietName;
+                if (strtolower($dietName) === strtolower($dietItem)) $matched = $dietName;
             }
-            if ($diet === null) {
-                throw new InvalidArgumentException("Unknown diet '{$dietInput}'. Add it on the Diets tab first.");
+            if ($matched === null) {
+                throw new InvalidArgumentException("Unknown diet '{$dietItem}'. Add it on the Diets tab first.");
             }
+            $chosenDiets[$matched] = true;
+        }
+        $dietList = array_values(array_filter($dietNames, static fn($n) => isset($chosenDiets[$n])));
+        if (!$dietList) {
+            $dietList = [in_array('Vegetarian', $dietNames, true) ? 'Vegetarian' : $dietNames[0]];
+        }
+        $diet = implode(',', $dietList);
+        if (strlen($diet) > 120) {
+            throw new InvalidArgumentException('Too many diets selected (limit is 120 characters in total)');
         }
 
         $nut = $input['nutrition'] ?? [];
@@ -414,7 +429,7 @@ class RecipeService {
             'category_name' => $row['category_name'] ?? $row['category_slug'],
             'subcategories' => array_values(array_filter(explode(',', (string)($row['subcategory_slug'] ?? '')))),
             'tags' => $tags,
-            'diet' => $row['diet'] ?? 'Vegetarian',
+            'diets' => ConfigService::splitDiets((string)($row['diet'] ?? 'Vegetarian')) ?: ['Vegetarian'],
             'prepTime' => (int)$row['prep_time'],
             'cookTime' => (int)$row['cook_time'],
             'servings' => (int)$row['servings'],
