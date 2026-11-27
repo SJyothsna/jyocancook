@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import RecipeCard from '../components/RecipeCard.astro';
+import ResponsiveImage from '../components/ResponsiveImage.astro';
 import { recipes, subcategories as allSubcategories } from '../lib/data';
 import { Utensils } from '@lucide/astro';
 
@@ -32,7 +33,7 @@ const subcategories = [...new Map(allSubcategories.map((s) => [s.slug, s.name]))
       </div>
       <aside class="hero-about panel panel-warm" aria-labelledby="about-card-title">
         <div class="hero-about-inner">
-          <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" width="1446" height="1087" /></div>
+          <div class="about-photo-wrap"><ResponsiveImage class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" sizes="(max-width: 560px) 100vw, 160px" width={1446} height={1087} loading="eager" fetchpriority="high" /></div>
           <div class="about-text">
             <h2 id="about-card-title">About Me</h2>
             <p>Cooking is my passion, and I believe great taste doesn't need complicated recipes. Through JyoCanCook, I share simple, authentic recipes inspired by our elders, keeping the flavours of home alive for the younger generation to enjoy and cherish.</p>
@@ -54,7 +55,7 @@ const subcategories = [...new Map(allSubcategories.map((s) => [s.slug, s.name]))
         <nav class="subcat-grid" aria-label="Browse by subcategory">
           {subcategories.map((s) => (
             <a class="subcat-box" href={`/recipes/?subcategory=${s.slug}`}>
-              <img class="subcat-thumb" src={s.image} alt="" loading="lazy" />
+              <ResponsiveImage class="subcat-thumb" src={s.image ?? ''} alt="" sizes="58px" />
               <span class="subcat-text">
                 <span class="subcat-name">{s.name}</span>
                 <span class="subcat-count">{s.count} {s.count === 1 ? 'recipe' : 'recipes'}</span>

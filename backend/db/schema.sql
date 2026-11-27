@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS `recipes` (
   `featured` TINYINT(1) NOT NULL DEFAULT 0,
   `story` TEXT NULL,
   `youtube_url` VARCHAR(300) NULL,
+  `cuisine` VARCHAR(60) NULL,
   `calories` INT UNSIGNED NULL,
   `carbs` DECIMAL(6,1) NULL,
   `protein` DECIMAL(6,1) NULL,

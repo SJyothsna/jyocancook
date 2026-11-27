@@ -1,13 +1,23 @@
 ---
 import { categoryName, recipeUrl, type Recipe } from '../lib/data';
+import ResponsiveImage from './ResponsiveImage.astro';
 import { Clock } from '@lucide/astro';
 
-const { recipe } = Astro.props as { recipe: Recipe };
+// priority: the card is in the first row of the page, so its photo loads straight away.
+const { recipe, priority = false } = Astro.props as { recipe: Recipe; priority?: boolean };
 const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
 ---
 <article class="recipe-card">
   <div class="recipe-card-media">
-    <img src={recipe.image} alt={recipe.title} width="600" height="400" loading="lazy" decoding="async" />
+    <ResponsiveImage
+      src={recipe.image}
+      alt={recipe.title}
+      sizes="(max-width: 599px) 100vw, (max-width: 1199px) 50vw, 380px"
+      width={600}
+      height={400}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
+    />
     <div class="recipe-time-badge">
       <Clock size={14} aria-hidden="true" />
       <span>{totalTime} min</span>

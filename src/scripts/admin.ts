@@ -25,7 +25,7 @@ function notice(s: string, error = false) {
 
 const UNITS = [
   { value: '', label: 'none' },
-  { value: 'tsp', label: 'Tsp' },
+  { value: 'tsp', label: 'tsp' },
   { value: 'tbsp', label: 'Tbsp' },
   { value: 'cup', label: 'cup' },
   { value: 'g', label: 'g (grams)' },
@@ -496,6 +496,7 @@ function recipeForm(r: any) {
 
     <label style="margin-top:12px">Cooking tips (one per line)<textarea name="tips" rows="3" placeholder="e.g. Adjust spice to taste.">${esc(r?.tips?.join('\n'))}</textarea></label>
     <label>Serve with (comma-separated)<input name="serveWith" placeholder="e.g. Steamed Rice, Roti, Sambar" value="${esc(r?.serveWith?.join(', '))}"/></label>
+    <label>Cuisine (optional)<input name="cuisine" maxlength="60" placeholder="e.g. Indian, Andhra, South Indian" value="${esc(r?.cuisine)}"/></label>
     <label>YouTube URL (optional)<input name="youtubeUrl" type="url" placeholder="https://youtube.com/watch?v=..." value="${esc(r?.youtubeUrl)}"/></label>
     <div class="field-note" style="margin-top:12px;">New recipes are saved as drafts. Tick Published on the recipe list to make one live. Use the Featured checkbox there to feature it.</div>
 

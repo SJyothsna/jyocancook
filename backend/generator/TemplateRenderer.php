@@ -14,6 +14,9 @@ class TemplateRenderer {
     private string $siteName;
     private string $tagline;
     private array $navLinks = [];
+    /** Web root, used to find which WebP copies of an image exist. null: images are shown as plain <img>. */
+    private ?string $publicPath = null;
+    private const IMAGE_WIDTHS = [480, 800, 1200];
 
     public function __construct(?array $config = null) {
         if ($config === null) {
@@ -23,6 +26,46 @@ class TemplateRenderer {
         $this->siteUrl = rtrim($config['url'], '/');
         $this->siteName = $config['name'] ?? 'JyoCanCook';
         $this->tagline = $config['tagline'] ?? 'Homemade Recipes';
+        $publicPath = rtrim((string)($config['public_path'] ?? ''), '/\\');
+        $this->publicPath = $publicPath !== '' ? $publicPath : null;
+    }
+
+    /**
+     * srcset of the WebP copies (x-480.webp, x-800.webp, x-1200.webp) that exist for a local /images/ file,
+     * or null. Same rules as src/lib/responsive-image.ts; the copies are made by bin/optimise-images.mjs
+     * and, for uploads, by ImageService.
+     */
+    public function webpSrcset(string $src): ?string {
+        if ($this->publicPath === null || str_contains($src, '..')
+            || !preg_match('#^/images/[^?\#]+\.(png|jpe?g|webp)$#i', $src)) {
+            return null;
+        }
+        $base = (string)preg_replace('/\.[^.\/]+$/', '', $src);
+        $parts = [];
+        foreach (self::IMAGE_WIDTHS as $w) {
+            if (is_file($this->publicPath . $base . "-{$w}.webp")) {
+                $parts[] = "{$base}-{$w}.webp {$w}w";
+            }
+        }
+        return $parts ? implode(', ', $parts) : null;
+    }
+
+    /**
+     * A photo with WebP copies in several sizes (the browser picks one); a plain <img> when there are none.
+     * $attrs: class, width, height, loading (default lazy), fetchpriority.
+     */
+    public function picture(string $src, string $alt, string $sizes, array $attrs = []): string {
+        $img = '<img src="' . self::esc($src) . '" alt="' . self::esc($alt) . '"';
+        foreach (['class', 'width', 'height'] as $name) {
+            if (isset($attrs[$name])) $img .= ' ' . $name . '="' . self::esc((string)$attrs[$name]) . '"';
+        }
+        $img .= ' loading="' . self::esc((string)($attrs['loading'] ?? 'lazy')) . '" decoding="async"';
+        if (!empty($attrs['fetchpriority'])) $img .= ' fetchpriority="' . self::esc((string)$attrs['fetchpriority']) . '"';
+        $img .= ' />';
+
+        $srcset = $this->webpSrcset($src);
+        if ($srcset === null) return $img;
+        return '<picture><source type="image/webp" srcset="' . self::esc($srcset) . '" sizes="' . self::esc($sizes) . '" />' . $img . '</picture>';
     }
 
     /** 0.5 -> "1/2", 1.5 -> "1 1/2", 2 -> "2". Same rules as src/lib/fractions.ts. */
@@ -39,9 +82,9 @@ class TemplateRenderer {
         return rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.');
     }
 
-    /** "tbsp" -> "Tbsp", "tsp" -> "Tsp"; other units are shown as typed. Same rules as src/lib/recipe-text.ts. */
+    /** "tbsp" -> "Tbsp", "TSP" -> "tsp"; other units are shown as typed. Same rules as src/lib/recipe-text.ts. */
     public static function unitLabel(string $unit): string {
-        $labels = ['tsp' => 'Tsp', 'tbsp' => 'Tbsp'];
+        $labels = ['tsp' => 'tsp', 'tbsp' => 'Tbsp'];
         return $labels[strtolower(trim($unit))] ?? $unit;
     }
 
@@ -106,7 +149,12 @@ class TemplateRenderer {
     <meta name="description" content="{$this->esc($description)}" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="canonical" href="{$this->esc($canonical)}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="/styles/global.css" />
+    <!-- Fonts load without blocking the first paint: print media is swapped to all once the file has arrived. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat+Brush&amp;family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@600;700&amp;display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat+Brush&amp;family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@600;700&amp;display=swap" /></noscript>
     {$this->renderRobots($noindex)}
     <meta property="og:title" content="{$this->esc($pageTitle)}" />
     <meta property="og:description" content="{$this->esc($description)}" />
@@ -120,7 +168,7 @@ class TemplateRenderer {
     <header>
       <div class="topbar">
         <div class="container topline">
-          <a class="logo" href="/" aria-label="JyoCanCook - Home">
+          <a class="logo" href="/" aria-label="JyoCanCook Homemade Recipes - Home">
             <svg
               width="32"
               height="32"
@@ -218,6 +266,7 @@ HTML;
             'printer' => '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/>',
             'utensils' => '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
             'lightbulb' => '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+            'play' => '<polygon points="6 3 20 12 6 21 6 3"/>',
         ];
         $cls = $class !== '' ? ' class="' . $class . '"' : '';
         return '<svg' . $cls . ' width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? '') . '</svg>';
@@ -316,8 +365,15 @@ HTML;
         return implode(',', array_map(static fn($d) => RecipeService::slugify((string)$d), $recipe['diets'] ?? []));
     }
 
-    public function renderRecipeCard(array $recipe): string {
+    /** $priority: the card is in the first row of the page, so its photo loads straight away. */
+    public function renderRecipeCard(array $recipe, bool $priority = false): string {
         $url = '/recipes/' . $recipe['slug'] . '/';
+        $photo = $this->picture(
+            (string)$recipe['image'],
+            (string)$recipe['title'],
+            '(max-width: 599px) 100vw, (max-width: 1199px) 50vw, 380px',
+            ['width' => 600, 'height' => 400, 'loading' => $priority ? 'eager' : 'lazy', 'fetchpriority' => $priority ? 'high' : '']
+        );
         $totalTime = ($recipe['prepTime'] ?? 0) + ($recipe['cookTime'] ?? 0);
         $dietHtml = !empty($recipe['diets']) ? ' · ' . $this->esc(implode(', ', $recipe['diets'])) : '';
         $categoryName = $recipe['category_name'] ?? ucfirst($recipe['category'] ?? '');
@@ -325,7 +381,7 @@ HTML;
         return <<<HTML
 <article class="recipe-card">
   <div class="recipe-card-media">
-    <img src="{$this->esc($recipe['image'])}" alt="{$this->esc($recipe['title'])}" width="600" height="400" loading="lazy" decoding="async" />
+    {$photo}
     <div class="recipe-time-badge">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <span>{$totalTime} min</span>
@@ -451,33 +507,34 @@ HTML;
             $tagsHtml .= "<a class=\"pill\" href=\"/tag/{$this->esc($tagSlug)}/\">{$this->esc($tag)}</a>\n";
         }
 
-        // Media HTML (YouTube or Image)
+        // The recipe photo is shown by default. With a video it gets a play button, and clicking that swaps
+        // the photo for the YouTube player in the same space (the player loads only then).
+        $heroSizes = '(max-width: 640px) 100vw, (max-width: 1024px) 62vw, 492px';
+        $photoHtml = $this->picture((string)$recipe['image'], (string)$recipe['title'], $heroSizes, [
+            'class' => 'recipe-main-image', 'width' => 800, 'height' => 600, 'loading' => 'eager', 'fetchpriority' => 'high',
+        ]);
+        // The main photo is the first thing seen, so it is fetched early.
+        $heroSrcset = $this->webpSrcset((string)$recipe['image']);
+        $heroPreload = $heroSrcset !== null
+            ? '<link rel="preload" as="image" type="image/webp" imagesrcset="' . $this->esc($heroSrcset) . '" imagesizes="' . $this->esc($heroSizes) . '" fetchpriority="high" />'
+            : '';
+        $watchButton = '';
         if ($youtubeEmbedUrl) {
-            $mediaHtml = <<<HTML
-<div class="recipe-main-media video-container">
-  <iframe
-    src="{$this->esc($youtubeEmbedUrl)}"
-    title="How to make {$this->esc($recipe['title'])}"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    allowfullscreen
-    loading="lazy"
-  ></iframe>
-</div>
+            $watchButton = <<<HTML
+<button type="button" class="watch-video" data-embed="{$this->esc($youtubeEmbedUrl)}" data-title="How to make {$this->esc($recipe['title'])}" aria-label="Play video: how to make {$this->esc($recipe['title'])}"><span class="watch-play">{$this->icon('play')}</span><span class="watch-label">Watch video</span></button>
+<div class="video-container"></div>
 HTML;
-        } else {
-            $mediaHtml = "<img class=\"recipe-main-image\" src=\"{$this->esc($recipe['image'])}\" alt=\"{$this->esc($recipe['title'])}\" width=\"800\" height=\"600\" />";
         }
+        $mediaHtml = '<div class="recipe-media">' . $photoHtml . $watchButton . '</div>';
 
-        // Calories pill inside meta strip
+        // Calories line inside the details card
         $caloriesPill = '';
         if (isset($recipe['nutrition']['calories'])) {
             $caloriesPill = <<<HTML
 <div class="meta-item">
   {$this->icon('zap', 'meta-icon')}
-  <div class="meta-content">
-    <span class="meta-label">Calories</span>
-    <strong class="meta-value">{$this->esc((string)$recipe['nutrition']['calories'])} kcal</strong>
-  </div>
+  <span class="meta-label">Calories</span>
+  <strong class="meta-value">{$this->esc((string)$recipe['nutrition']['calories'])} kcal</strong>
 </div>
 HTML;
         }
@@ -512,7 +569,7 @@ HTML;
             }
         }
 
-        // Story Panel HTML
+        // Story Panel HTML (shown beside the photo, under the description)
         $storyHtml = '';
         if (!empty($recipe['story'])) {
             $storyHtml = <<<HTML
@@ -555,7 +612,7 @@ HTML;
         foreach ($recipe['steps'] as $idx => $s) {
             $num = $idx + 1;
             $imgHtml = !empty($s['image'])
-                ? "<div class=\"step-image-wrap\"><img class=\"step-image\" src=\"{$this->esc($s['image'])}\" alt=\"{$this->esc($s['title'])}\" loading=\"lazy\" /></div>"
+                ? '<div class="step-image-wrap">' . $this->picture((string)$s['image'], (string)$s['title'], '220px', ['class' => 'step-image']) . '</div>'
                 : '';
 
             // A step titled "Optional: ..." keeps its wording and gets an "Optional" label.
@@ -624,7 +681,7 @@ HTML;
                 $cName = $sr['category_name'] ?? ucfirst($sr['category'] ?? '');
                 $items .= <<<HTML
 <a class="sidebar-recipe-item" href="/recipes/{$this->esc($sr['slug'])}/">
-  <img class="sidebar-recipe-thumb" src="{$this->esc($sr['image'])}" alt="{$this->esc($sr['title'])}" loading="lazy" />
+  {$this->picture((string)$sr['image'], (string)$sr['title'], '64px', ['class' => 'sidebar-recipe-thumb'])}
   <div class="sidebar-recipe-info">
     <h3>{$this->esc($sr['title'])}</h3>
     <div class="sidebar-recipe-meta">
@@ -654,7 +711,7 @@ HTML;
                 $cName = $lr['category_name'] ?? ucfirst($lr['category'] ?? '');
                 $items .= <<<HTML
 <a class="sidebar-recipe-item" href="/recipes/{$this->esc($lr['slug'])}/">
-  <img class="sidebar-recipe-thumb" src="{$this->esc($lr['image'])}" alt="{$this->esc($lr['title'])}" loading="lazy" />
+  {$this->picture((string)$lr['image'], (string)$lr['title'], '64px', ['class' => 'sidebar-recipe-thumb'])}
   <div class="sidebar-recipe-info">
     <h3>{$this->esc($lr['title'])}</h3>
     <div class="sidebar-recipe-meta">
@@ -684,8 +741,6 @@ HTML;
   <div class="recipe-title">
     <h1>{$this->esc($recipe['title'])}</h1>
     <p class="recipe-by">Recipe by <strong>JyoCanCook</strong></p>
-
-    <p class="intro">{$this->esc($recipe['description'])}</p>
     <div class="tags">
       {$tagsHtml}
     </div>
@@ -698,43 +753,40 @@ HTML;
 
   <div class="recipe-layout">
     <div>
-      {$mediaHtml}
+      <div class="recipe-hero">
+        {$mediaHtml}
+        <div class="recipe-about">
+          <div class="recipe-story-badge">About this recipe</div>
+          <p class="intro">{$this->esc($recipe['description'])}</p>
+          {$storyHtml}
+        </div>
+      </div>
 
       <div class="meta-strip">
         <div class="meta-item">
           {$this->icon('clock', 'meta-icon')}
-          <div class="meta-content">
-            <span class="meta-label">Prep Time</span>
-            <strong class="meta-value">{$this->esc((string)($recipe['prepTime'] ?? 15))} min</strong>
-          </div>
+          <span class="meta-label">Prep time</span>
+          <strong class="meta-value">{$this->esc((string)($recipe['prepTime'] ?? 15))} min</strong>
         </div>
         <div class="meta-item">
           {$this->icon('flame', 'meta-icon')}
-          <div class="meta-content">
-            <span class="meta-label">Cook Time</span>
-            <strong class="meta-value">{$this->esc((string)($recipe['cookTime'] ?? 30))} min</strong>
-          </div>
+          <span class="meta-label">Cook time</span>
+          <strong class="meta-value">{$this->esc((string)($recipe['cookTime'] ?? 30))} min</strong>
         </div>
         <div class="meta-item">
           {$this->icon('users', 'meta-icon')}
-          <div class="meta-content">
-            <span class="meta-label">Servings</span>
-            <strong class="meta-value">{$this->esc((string)($recipe['servings'] ?? 4))}</strong>
-          </div>
+          <span class="meta-label">Servings</span>
+          <strong class="meta-value">{$this->esc((string)($recipe['servings'] ?? 4))}</strong>
         </div>
         <div class="meta-item">
           {$this->icon('star', 'meta-icon')}
-          <div class="meta-content">
-            <span class="meta-label">Difficulty</span>
-            <strong class="meta-value">{$this->esc($recipe['difficulty'] ?? 'Easy')}</strong>
-          </div>
+          <span class="meta-label">Difficulty</span>
+          <strong class="meta-value">{$this->esc($recipe['difficulty'] ?? 'Easy')}</strong>
         </div>
         {$caloriesPill}
       </div>
 
       {$nutritionHtml}
-
-      {$storyHtml}
 
       <div class="panel">
         <div class="ingredients-head">
@@ -828,6 +880,25 @@ HTML;
     }
 
     var shareBtn = document.querySelector('#share');
+    // The recipe photo is shown with a play button. Clicking it swaps the photo for the YouTube player
+    // in the same space; the player is only loaded at that point.
+    var watchBtn = document.querySelector('.watch-video');
+    var videoBox = document.querySelector('.recipe-media .video-container');
+    if (watchBtn && videoBox) {
+      watchBtn.addEventListener('click', function() {
+        var embed = watchBtn.getAttribute('data-embed');
+        var frame = document.createElement('iframe');
+        frame.src = embed + (embed.indexOf('?') === -1 ? '?' : '&') + 'autoplay=1';
+        frame.title = watchBtn.getAttribute('data-title') || 'Recipe video';
+        frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        frame.allowFullscreen = true;
+        videoBox.innerHTML = '';
+        videoBox.appendChild(frame);
+        videoBox.className += ' playing';
+        watchBtn.hidden = true;
+        frame.focus();
+      });
+    }
     if (shareBtn) {
       shareBtn.onclick = function() {
         if (navigator.share) {
@@ -854,7 +925,7 @@ HTML;
             $recipe['description'],
             $canonicalPath,
             $bodyContent,
-            ['head' => $jsonLd, 'image' => $recipe['image'], 'active_nav' => '/recipes/', 'noindex' => $preview]
+            ['head' => $jsonLd . $heroPreload, 'image' => $recipe['image'], 'active_nav' => '/recipes/', 'noindex' => $preview]
         );
     }
 
@@ -878,7 +949,7 @@ HTML;
             $count = count($items);
             $label = $count === 1 ? 'recipe' : 'recipes';
             $subcategoryBoxes .= "<a class=\"subcat-box\" href=\"/recipes/?subcategory={$this->esc((string)$slug)}\">"
-                . "<img class=\"subcat-thumb\" src=\"{$this->esc($items[0]['image'] ?? '')}\" alt=\"\" loading=\"lazy\" />"
+                . $this->picture((string)($items[0]['image'] ?? ''), '', '58px', ['class' => 'subcat-thumb'])
                 . "<span class=\"subcat-text\"><span class=\"subcat-name\">{$this->esc($name)}</span>"
                 . "<span class=\"subcat-count\">{$count} {$label}</span></span></a>\n";
         }
@@ -909,7 +980,7 @@ HTML;
     </div>
     <aside class="hero-about panel panel-warm" aria-labelledby="about-card-title">
       <div class="hero-about-inner">
-        <div class="about-photo-wrap"><img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" width="1446" height="1087" /></div>
+        <div class="about-photo-wrap">{$this->picture('/images/about/about-me.jpg', 'Portrait of the author of JyoCanCook', '(max-width: 560px) 100vw, 160px', ['class' => 'about-photo', 'width' => 1446, 'height' => 1087, 'loading' => 'eager', 'fetchpriority' => 'high'])}</div>
         <div class="about-text">
           <h2 id="about-card-title">About Me</h2>
           <p>Cooking is my passion, and I believe great taste doesn't need complicated recipes. Through JyoCanCook, I share simple, authentic recipes inspired by our elders, keeping the flavours of home alive for the younger generation to enjoy and cherish.</p>
@@ -967,7 +1038,7 @@ HTML;
 
         $cardsHtml = '';
         $usedSubcategories = [];
-        foreach ($recipes as $r) {
+        foreach (array_values($recipes) as $i => $r) {
             $tLower = strtolower($r['title']);
             $ingNames = strtolower(implode(' ', array_column($r['ingredients'] ?? [], 'name')));
             $subSlugs = $this->recipeSubSlugs($r, $subNames, $catMap);
@@ -975,7 +1046,7 @@ HTML;
                 $usedSubcategories[$subSlug] = $subNames[$subSlug] ?? $subSlug;
             }
             $subSlug = implode(',', $subSlugs);
-            $card = $this->renderRecipeCard($r);
+            $card = $this->renderRecipeCard($r, $i < 3);
 
             $dietSlug = $this->dietSlugList($r);
             $cardsHtml .= "<div data-title=\"{$this->esc($tLower)}\" data-ingredients=\"{$this->esc($ingNames)}\" data-subcategory=\"{$this->esc($subSlug)}\" data-diet=\"{$this->esc($dietSlug)}\">{$card}</div>\n";
@@ -1103,13 +1174,13 @@ HTML;
 
         $cardsHtml = '';
         $usedDiets = [];
-        foreach ($recipes as $r) {
+        foreach (array_values($recipes) as $i => $r) {
             $sub = $this->esc($byCategory ? (string)($r['category'] ?? '') : implode(',', $this->recipeSubSlugs($r, $subNames, $catMap)));
             $dietSlug = $this->dietSlugList($r);
             foreach ($r['diets'] ?? [] as $dietName) {
                 $usedDiets[RecipeService::slugify((string)$dietName)] = true;
             }
-            $cardsHtml .= "<div data-subcategory=\"{$sub}\" data-diet=\"{$this->esc($dietSlug)}\">" . $this->renderRecipeCard($r) . "</div>\n";
+            $cardsHtml .= "<div data-subcategory=\"{$sub}\" data-diet=\"{$this->esc($dietSlug)}\">" . $this->renderRecipeCard($r, $i < 3) . "</div>\n";
         }
 
         $total = count($recipes);
@@ -1235,8 +1306,8 @@ HTML;
         $canonicalPath = '/tag/' . $tagSlug . '/';
 
         $cardsHtml = '';
-        foreach ($recipes as $r) {
-            $cardsHtml .= $this->renderRecipeCard($r) . "\n";
+        foreach (array_values($recipes) as $i => $r) {
+            $cardsHtml .= $this->renderRecipeCard($r, $i < 3) . "\n";
         }
 
         $gridHtml = !empty($cardsHtml)
@@ -1366,7 +1437,7 @@ HTML;
         $content = <<<HTML
 <div class="container section about-page">
   <div class="about-layout">
-    <img class="about-photo" src="/images/about/about-me.jpg" alt="Portrait of the author of JyoCanCook" width="1446" height="1087" />
+    {$this->picture('/images/about/about-me.jpg', 'Portrait of the author of JyoCanCook', '(max-width: 1024px) 24vw, 280px', ['class' => 'about-photo', 'width' => 1446, 'height' => 1087, 'loading' => 'eager', 'fetchpriority' => 'high'])}
     <div class="about-text">
       <span class="eyebrow">About Me</span>
       <h1 class="page-title">Simple cooking, unforgettable flavours.</h1>

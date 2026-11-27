@@ -197,10 +197,36 @@ describe('PHP API gateway runtime security (WASM PHP 8.3 + SQLite stand-in)', ()
       const r = await upload(c, csrf, 'evil.php', dataUrl('image/png', makePng()));
       assert.equal(r.httpStatusCode, 200, r.text);
       const out = json(r);
-      assert.match(out.filename, /\.png$/);
-      assert.equal(out.mime, 'image/png');
+      // WebP when the server can write it, otherwise the format the content really has.
+      assert.match(out.filename, /\.(webp|png)$/);
+      assert.equal(out.mime, out.filename.endsWith('.webp') ? 'image/webp' : 'image/png');
       assert.ok(!/\.php/i.test(out.filename));
       assert.ok(fs.existsSync(path.join(uploadsDir(), out.filename)));
+    });
+
+    it('stores a WebP plus smaller copies, and the pages offer them in a srcset', async (t) => {
+      await resetDb(main);
+      const { c, csrf } = await authed(main);
+      const r = await upload(c, csrf, 'photo.png', dataUrl('image/png', makePng(1300, 900)));
+      assert.equal(r.httpStatusCode, 200, r.text);
+      const out = json(r);
+      if (!out.filename.endsWith('.webp')) return t.skip('GD cannot write WebP');
+
+      const base = out.filename.replace(/\.webp$/, '');
+      for (const w of [480, 800, 1200]) {
+        assert.ok(fs.existsSync(path.join(uploadsDir(), `${base}-${w}.webp`)), `${w}px copy`);
+      }
+      const html = await phpRun(`
+        require_once '/main/backend-staging/generator/TemplateRenderer.php';
+        $r = new TemplateRenderer(['url' => 'https://x.test', 'public_path' => '/main/public_html/staging']);
+        echo $r->picture('${out.path}', 'Photo', '100vw', ['class' => 'x']);
+        echo "\\n";
+        echo $r->picture('/images/recipes/missing.png', 'Missing', '100vw');`);
+      const [withCopies, without] = html.split('\n');
+      const dir = '/images/recipes';
+      assert.ok(withCopies.includes(`srcset="${dir}/${base}-480.webp 480w, ${dir}/${base}-800.webp 800w, ${dir}/${base}-1200.webp 1200w"`), withCopies);
+      assert.ok(withCopies.includes('<picture>') && withCopies.includes('loading="lazy"'), withCopies);
+      assert.ok(!without.includes('<picture>') && without.includes('<img src="/images/recipes/missing.png"'), 'no copies: plain <img>');
     });
 
     it('re-encodes images so an appended PHP payload is not stored', async () => {
@@ -230,7 +256,7 @@ describe('PHP API gateway runtime security (WASM PHP 8.3 + SQLite stand-in)', ()
       const { c, csrf } = await authed(main);
       const j = await upload(c, csrf, 'photo.JPEG', `data:image/jpeg;base64,${imgs.jpeg}`);
       assert.equal(j.httpStatusCode, 200, j.text);
-      assert.match(json(j).filename, /\.jpg$/);
+      assert.match(json(j).filename, /\.(webp|jpg)$/);
       if (imgs.webp) {
         const w = await upload(c, csrf, 'photo.webp', `data:image/webp;base64,${imgs.webp}`);
         assert.equal(w.httpStatusCode, 200, w.text);

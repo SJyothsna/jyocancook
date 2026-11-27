@@ -1,0 +1,26 @@
+---
+import { webpSrcset } from '../lib/responsive-image';
+
+// A recipe photo with WebP copies in several sizes (the browser picks one). Falls back to a plain <img>.
+interface Props {
+  src: string;
+  alt: string;
+  sizes: string;
+  width?: number | string;
+  height?: number | string;
+  class?: string;
+  loading?: 'lazy' | 'eager';
+  fetchpriority?: 'high' | 'low' | 'auto';
+}
+
+const { src, alt, sizes, width, height, class: className, loading = 'lazy', fetchpriority } = Astro.props;
+const srcset = webpSrcset(src);
+---
+{srcset ? (
+  <picture>
+    <source type="image/webp" srcset={srcset} sizes={sizes} />
+    <img src={src} alt={alt} width={width} height={height} class={className} loading={loading} decoding="async" fetchpriority={fetchpriority} />
+  </picture>
+) : (
+  <img src={src} alt={alt} width={width} height={height} class={className} loading={loading} decoding="async" fetchpriority={fetchpriority} />
+)}

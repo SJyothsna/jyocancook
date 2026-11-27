@@ -48,6 +48,12 @@ function runMigration(?PDO $pdo = null): array {
         if ($dietLen !== false && (int)$dietLen < 120) {
             $pdo->exec("ALTER TABLE `recipes` MODIFY `diet` VARCHAR(120) NOT NULL DEFAULT 'Vegetarian'");
         }
+
+        // Optional cuisine (Recipe structured data): add the column once to databases created before it existed.
+        $hasCuisine = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'recipes' AND COLUMN_NAME = 'cuisine'")->fetchColumn();
+        if ((int)$hasCuisine === 0) {
+            $pdo->exec("ALTER TABLE `recipes` ADD COLUMN `cuisine` VARCHAR(60) NULL AFTER `youtube_url`");
+        }
     } else {
         throw new RuntimeException("schema.sql not found at {$schemaFile}");
     }

@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { applyListFormat, stepBlocks, unitLabel } from '../src/lib/recipe-text.ts';
 
 describe('unitLabel', () => {
-  it('capitalises tsp and tbsp, whatever the stored case', () => {
+  it('shows Tbsp with a capital T and tsp in lowercase, whatever the stored case', () => {
     assert.equal(unitLabel('tbsp'), 'Tbsp');
     assert.equal(unitLabel('TBSP'), 'Tbsp');
-    assert.equal(unitLabel('tsp'), 'Tsp');
+    assert.equal(unitLabel('tsp'), 'tsp');
+    assert.equal(unitLabel('TSP'), 'tsp');
+    assert.equal(unitLabel('Tsp'), 'tsp');
   });
 
   it('leaves other units as typed', () => {

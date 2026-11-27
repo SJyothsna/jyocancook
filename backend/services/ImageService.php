@@ -16,6 +16,9 @@ class ImageService {
     private int $maxBytes;
     private const MAX_PIXELS = 40000000; // 40 megapixels (decompression-bomb guard)
     private const MAX_DIMENSION = 10000;
+    private const IMAGE_WIDTHS = [480, 800, 1200]; // keep in step with bin/optimise-images.mjs
+    private const IMAGE_RATIOS = ['1x1' => [1, 1], '4x3' => [4, 3], '16x9' => [16, 9]]; // keep in step with bin/optimise-images.mjs
+    private const WEBP_QUALITY = 80;
 
     private array $allowedMimes = [
         'image/jpeg' => 'jpg',
@@ -103,14 +106,21 @@ HTACCESS;
             throw new InvalidArgumentException('Image dimensions are too large');
         }
 
-        // 3. Re-encode: drops anything that is not pixel data (appended code, metadata)
-        $clean = $this->reencode($binary, $mime);
-        if ($clean === null) {
-            // GD unavailable: fall back to refusing files that embed server-side code or markup
-            if (preg_match('/<\?(php|=)|<script|<%|#!\/|<svg|<html/i', $binary)) {
-                throw new InvalidArgumentException('Invalid image content');
+        // 3. Re-encode as WebP (smaller files, plus small copies for phones). Re-encoding also drops anything
+        //    that is not pixel data (appended code, metadata). Without GD WebP support the original format is kept.
+        $webp = $this->toWebp($binary);
+        if ($webp !== null) {
+            $mime = 'image/webp';
+            $clean = $webp['main'];
+        } else {
+            $clean = $this->reencode($binary, $mime);
+            if ($clean === null) {
+                // GD unavailable: fall back to refusing files that embed server-side code or markup
+                if (preg_match('/<\?(php|=)|<script|<%|#!\/|<svg|<html/i', $binary)) {
+                    throw new InvalidArgumentException('Invalid image content');
+                }
+                $clean = $binary;
             }
-            $clean = $binary;
         }
 
         $ext = $this->allowedMimes[$mime];
@@ -128,6 +138,21 @@ HTACCESS;
         }
         @chmod($targetPath, 0644);
 
+        // Smaller copies (name-480.webp ...). They are optional: a page only lists the ones that exist.
+        foreach ($webp['variants'] ?? [] as $variantWidth => $data) {
+            $variantPath = $this->uploadDir . '/' . substr($filename, 0, -strlen('.webp')) . "-{$variantWidth}.webp";
+            if (@file_put_contents($variantPath, $data) !== false) {
+                @chmod($variantPath, 0644);
+            }
+        }
+        // Cropped copies for structured data and social sharing (name-1x1.jpg, name-4x3.jpg, name-16x9.jpg), also optional.
+        foreach ($webp['ratios'] ?? [] as $ratio => $data) {
+            $ratioPath = $this->uploadDir . '/' . substr($filename, 0, -strlen('.webp')) . "-{$ratio}.jpg";
+            if (@file_put_contents($ratioPath, $data) !== false) {
+                @chmod($ratioPath, 0644);
+            }
+        }
+
         return [
             'ok' => true,
             'filename' => $filename,
@@ -135,6 +160,101 @@ HTACCESS;
             'size' => strlen($clean),
             'mime' => $mime,
         ];
+    }
+
+    /**
+     * WebP version of the image (largest side 1200 px at most), smaller copies for the widths
+     * in IMAGE_WIDTHS that fit, and centred 1:1, 4:3 and 16:9 JPEG crops (at most 1200 px wide).
+     * Same file names as bin/optimise-images.mjs. Returns null when GD cannot write WebP; throws
+     * when the bytes are not a decodable image.
+     *
+     * @return array{main: string, variants: array<int, string>, ratios: array<string, string>}|null
+     */
+    private function toWebp(string $binary): ?array {
+        if (!function_exists('imagecreatefromstring') || !function_exists('imagewebp') || !function_exists('imagescale')) {
+            return null;
+        }
+        $img = @imagecreatefromstring($binary);
+        if ($img === false) {
+            throw new InvalidArgumentException('Corrupted or invalid image file');
+        }
+        if (function_exists('imagepalettetotruecolor')) {
+            imagepalettetotruecolor($img);
+        }
+        imagealphablending($img, false);
+        imagesavealpha($img, true);
+
+        $encode = static function ($im): ?string {
+            ob_start();
+            $ok = imagewebp($im, null, self::WEBP_QUALITY);
+            $out = (string)ob_get_clean();
+            return ($ok && $out !== '') ? $out : null;
+        };
+        // Width $w copy of $img; the picture itself when it is not wider than $w.
+        $encodeAt = static function (int $w) use ($img, $encode): ?string {
+            if ($w >= imagesx($img)) return $encode($img);
+            $scaled = imagescale($img, $w, -1);
+            if ($scaled === false) return null;
+            $out = $encode($scaled);
+            imagedestroy($scaled);
+            return $out;
+        };
+
+        $width = imagesx($img);
+        $main = $encodeAt(max(self::IMAGE_WIDTHS));
+        if ($main === null) {
+            imagedestroy($img);
+            return null;
+        }
+        // Widths up to the original; a picture narrower than the smallest size still gets one copy.
+        $widths = array_values(array_filter(self::IMAGE_WIDTHS, static fn(int $w) => $w <= $width)) ?: [self::IMAGE_WIDTHS[0]];
+        $variants = [];
+        foreach ($widths as $w) {
+            $data = $encodeAt($w);
+            if ($data !== null) $variants[$w] = $data;
+        }
+        $ratios = [];
+        foreach (self::IMAGE_RATIOS as $name => [$rw, $rh]) {
+            $data = $this->ratioJpeg($img, $rw, $rh);
+            if ($data !== null) $ratios[$name] = $data;
+        }
+        imagedestroy($img);
+        return ['main' => $main, 'variants' => $variants, 'ratios' => $ratios];
+    }
+
+    /** Largest centred crop of $img with ratio $rw:$rh, at most 1200 px wide, as JPEG (transparency becomes white). */
+    private function ratioJpeg($img, int $rw, int $rh): ?string {
+        if (!function_exists('imagejpeg') || !function_exists('imagecreatetruecolor') || !function_exists('imagecopyresampled')) {
+            return null;
+        }
+        $sw = imagesx($img);
+        $sh = imagesy($img);
+        $cw = $sw;
+        $ch = (int)round($sw * $rh / $rw);
+        if ($ch > $sh) {
+            $ch = $sh;
+            $cw = (int)round($sh * $rw / $rh);
+        }
+        $ow = $cw;
+        $oh = $ch;
+        $max = max(self::IMAGE_WIDTHS);
+        if ($ow > $max) {
+            $oh = (int)round($ch * $max / $cw);
+            $ow = $max;
+        }
+        if ($ow < 1 || $oh < 1 || $cw < 1 || $ch < 1) return null;
+        $dst = imagecreatetruecolor($ow, $oh);
+        imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+        imagealphablending($dst, true);
+        $ok = imagecopyresampled($dst, $img, 0, 0, intdiv($sw - $cw, 2), intdiv($sh - $ch, 2), $ow, $oh, $cw, $ch);
+        $out = '';
+        if ($ok) {
+            ob_start();
+            $ok = imagejpeg($dst, null, 82);
+            $out = (string)ob_get_clean();
+        }
+        imagedestroy($dst);
+        return ($ok && $out !== '') ? $out : null;
     }
 
     /**

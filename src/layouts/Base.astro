@@ -2,17 +2,29 @@
 import '../styles/global.css';
 import { Menu, Search } from '@lucide/astro';
 import { menu } from '../lib/data';
+import { SITE_NAME, DEFAULT_OG_IMAGE, metaDescription, ogImagePath } from '../lib/seo';
 
 const {
   title = 'Homemade Indian Recipes',
   description = 'Discover authentic Indian dishes, everyday meals and family favourites at JyoCanCook.',
-  image = '/images/recipes/andhra-chicken-curry.png',
+  image = DEFAULT_OG_IMAGE,
+  imageAlt = '',
+  // Open Graph type: "article" on recipe pages, "website" elsewhere.
+  ogType = 'website',
   noindex = false,
   // true: the header links are filled in by the page's script from the saved Navigation Menu (admin page).
   dynamicNav = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+// Page title, meta description (about 50-155 characters) and the picture shown when the page is shared.
+const pageTitle = `${title} | ${SITE_NAME}`;
+const metaDesc = metaDescription(description);
+const ogImage = new URL(ogImagePath(image), Astro.site).toString();
+
+// Same URL in backend/generator/TemplateRenderer.php.
+const FONTS_URL =
+  'https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap';
 
 // Active nav item: the matching link, or "Recipes" on category/tag pages that have no link of their own.
 const path = Astro.url.pathname;
@@ -26,21 +38,34 @@ const isActive = (href: string) =>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={description} />
+    <meta name="description" content={metaDesc} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="canonical" href={canonical} />
+    {!noindex && <link rel="canonical" href={canonical} />}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fonts load without blocking the first paint: print media is swapped to all once the file has arrived. -->
+    <link rel="stylesheet" href={FONTS_URL} media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href={FONTS_URL} /></noscript>
     {noindex && <meta name="robots" content="noindex,nofollow" />}
-    <meta property="og:title" content={`${title} | JyoCanCook`} />
-    <meta property="og:description" content={description} />
-    <meta property="og:image" content={new URL(image, Astro.site).toString()} />
-    <title>{title} | JyoCanCook</title>
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={metaDesc} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    {imageAlt && <meta property="og:image:alt" content={imageAlt} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={metaDesc} />
+    <meta name="twitter:image" content={ogImage} />
+    <title>{pageTitle}</title>
     <slot name="head" />
   </head>
   <body>
     <header>
       <div class="topbar">
         <div class="container topline">
-          <a class="logo" href="/" aria-label="JyoCanCook - Home">
+          <a class="logo" href="/" aria-label="JyoCanCook Homemade Recipes - Home">
             <img class="logo-img" src="/images/logo.png" alt="" width="64" height="64" />
             <div class="logo-text">
               <span>JyoCanCook</span>

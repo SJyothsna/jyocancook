@@ -398,6 +398,14 @@ ALTER TABLE `recipes` MODIFY `diet` VARCHAR(120) NOT NULL DEFAULT 'Vegetarian';
 
 The first adds the Diets list (empty means Vegetarian and Non-Vegetarian are used); the second lets a recipe have several diets, stored comma-separated.
 
+**Cuisine (required once on an existing database, before saving any recipe with the updated code).** In phpMyAdmin select the production database and run:
+
+```sql
+ALTER TABLE `recipes` ADD COLUMN `cuisine` VARCHAR(60) NULL AFTER `youtube_url`;
+```
+
+It is optional text used in the recipe's search-engine data; existing recipes simply keep it empty. Running it twice fails with "Duplicate column name", which is harmless.
+
 
 
 

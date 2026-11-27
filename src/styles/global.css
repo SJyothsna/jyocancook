@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+/* The Google fonts (Caveat Brush, Inter, Playfair Display) are loaded by a <link> in the page head
+   (Base.astro and TemplateRenderer.php), not by an @import here: an @import makes the page wait for
+   this file and then for the font stylesheet one after the other. */
 
 :root {
   --primary: #8d1731;
@@ -69,6 +71,11 @@ a {
 img {
   max-width: 100%;
   display: block;
+}
+
+/* <picture> only picks the image file; the <img> inside is what is laid out and styled. */
+picture {
+  display: contents;
 }
 
 button,
@@ -998,12 +1005,15 @@ main {
   margin: 22px 0 20px;
 }
 
+/* Links inside running text must not rely on colour alone (WCAG 1.4.1). */
 .breadcrumb a {
   color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .breadcrumb a:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 
 /* Title block */
@@ -1027,13 +1037,6 @@ main {
 .recipe-title .recipe-by strong {
   color: var(--primary);
   font-weight: 600;
-}
-
-.recipe-title .intro {
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--text-para);
-  margin: 0 0 18px;
 }
 
 .tags {
@@ -1113,6 +1116,7 @@ main {
 .recipe-main-image {
   display: block;
   width: 100%;
+  height: auto; /* the height="600" attribute must not override the 4:3 aspect-ratio */
   aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: 14px;
@@ -1120,33 +1124,67 @@ main {
   margin-bottom: 24px;
 }
 
-.recipe-main-media.video-container {
-  aspect-ratio: 16 / 9;
-  margin: 0 0 24px;
-  border-radius: 14px;
+/* The photo (with its play button, if the recipe has a video) floats on the left and the description and
+   story flow beside it. Whatever is longer than the photo continues below it, at full width. */
+.recipe-hero {
+  display: flow-root;
+  margin-bottom: 16px;
 }
 
-/* Information cards */
+.recipe-hero > .recipe-media {
+  position: relative;
+  float: left;
+  width: calc(61.5% - 10px);
+  margin: 0 20px 8px 0;
+}
+
+.recipe-media .recipe-main-image {
+  margin-bottom: 0;
+}
+
+.recipe-about .intro {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-para);
+  margin: 0 0 16px;
+}
+
+/* Sub titles beside the photo: same font as the "Ingredients" heading, a bit smaller */
+.recipe-about .recipe-story-badge {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--primary);
+}
+
+/* No side bar here: a bar would be drawn over the photo where the text wraps below it */
+.recipe-about .recipe-story-panel {
+  margin: 0;
+  padding: 0;
+  border-left: 0;
+}
+
+/* Details card (above the nutrition strip): the details in a row, then the video row */
 .meta-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-  gap: 10px;
-  margin-bottom: 28px;
-}
-
-.meta-strip:has(+ .nutrition-strip) {
-  margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
 }
 
 .meta-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  min-height: 58px;
-  padding: 10px 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  gap: 4px 8px;
 }
 
 .meta-icon {
@@ -1156,27 +1194,19 @@ main {
   flex: none;
 }
 
-.meta-content {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
 .meta-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 14px;
   line-height: 1.3;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--text-secondary);
 }
 
 .meta-value {
+  flex-basis: 100%;
+  padding-left: 26px;
   font-size: 16px;
   font-weight: 700;
   line-height: 1.3;
   color: var(--ink);
-  white-space: nowrap;
 }
 
 /* Nutrition */
@@ -1310,6 +1340,79 @@ main {
   height: 100%;
   border: 0;
 }
+
+/* Play button laid over the recipe photo. Clicking it swaps the photo for the YouTube player,
+   which fills exactly the same box (the player is only loaded at that point). */
+.watch-video {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--white);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.watch-video[hidden] {
+  display: none;
+}
+
+.watch-video:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.watch-play svg {
+  box-sizing: content-box;
+  width: 28px;
+  height: 28px;
+  padding: 18px 18px 18px 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--white);
+  fill: currentColor;
+  stroke: currentColor;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.watch-video:hover .watch-play svg {
+  transform: scale(1.1);
+}
+
+.watch-label {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* The player sits on top of the photo, same size and rounded corners. */
+.recipe-media .video-container {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  aspect-ratio: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 14px;
+  display: none;
+}
+
+.recipe-media .video-container.playing {
+  display: block;
+}
+
 
 /* Ingredients */
 .ingredients-head {
@@ -1698,12 +1801,14 @@ main {
     padding: 22px 16px;
   }
 
-  .meta-strip {
-    grid-template-columns: repeat(2, 1fr);
+  .recipe-hero > .recipe-media {
+    float: none;
+    width: 100%;
+    margin: 0 0 16px;
   }
 
-  .meta-strip > .meta-item:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
+  .meta-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .ingredient-grid {
@@ -1821,10 +1926,12 @@ main {
   color: var(--primary);
   font-size: 14px;
   font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .footer a:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 
 @media (max-width: 860px) {
@@ -2347,11 +2454,20 @@ main {
   .breadcrumb,
   .steps .step img,
   .step-image-wrap,
-  .step-image {
+  .step-image,
+  .recipe-layout aside,
+  .video-container,
+  .watch-video,
+  .tags,
+  .scale-group {
     display: none !important;
   }
   .recipe-layout {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+  }
+  .recipe-layout > :first-child,
+  .recipe-title {
+    max-width: none;
   }
   body {
     background: white;

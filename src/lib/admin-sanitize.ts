@@ -86,6 +86,7 @@ export function sanitizeRecipe(r: any) {
     tips: Array.isArray(r.tips) ? r.tips.slice(0, 30).map(String) : [],
     serveWith: Array.isArray(r.serveWith) ? r.serveWith.slice(0, 30).map(String) : [],
     ...(r.youtubeUrl && validUrl(String(r.youtubeUrl)) ? { youtubeUrl: r.youtubeUrl } : {}),
+    ...(String(r.cuisine || '').trim() ? { cuisine: String(r.cuisine).trim().slice(0, 60) } : {}),
     ...(nutrition ? { nutrition } : {}),
   };
 }

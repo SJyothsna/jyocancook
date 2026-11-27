@@ -177,6 +177,8 @@ class RecipeService {
         $featured = !empty($input['featured']) ? 1 : 0;
         $story = !empty($input['story']) ? trim((string)$input['story']) : null;
         $youtubeUrl = !empty($input['youtubeUrl']) ? trim((string)$input['youtubeUrl']) : null;
+        $cuisine = trim((string)($input['cuisine'] ?? ''));
+        $cuisine = $cuisine !== '' ? mb_substr($cuisine, 0, 60) : null;
         $image = !empty($input['image']) ? trim((string)$input['image']) : '/images/recipes/recipe-placeholder.svg';
 
         $this->pdo->beginTransaction();
@@ -200,6 +202,7 @@ class RecipeService {
                         `featured` = :featured,
                         `story` = :story,
                         `youtube_url` = :youtube_url,
+                        `cuisine` = :cuisine,
                         `calories` = :calories,
                         `carbs` = :carbs,
                         `protein` = :protein,
@@ -227,6 +230,7 @@ class RecipeService {
                     ':featured' => $featured,
                     ':story' => $story,
                     ':youtube_url' => $youtubeUrl,
+                    ':cuisine' => $cuisine,
                     ':calories' => $calories,
                     ':carbs' => $carbs,
                     ':protein' => $protein,
@@ -243,13 +247,13 @@ class RecipeService {
                     INSERT INTO `recipes` (
                         `slug`, `title`, `description`, `category_slug`, `subcategory_slug`, `diet`,
                         `prep_time`, `cook_time`, `servings`, `difficulty`, `image`,
-                        `published`, `featured`, `story`, `youtube_url`,
+                        `published`, `featured`, `story`, `youtube_url`, `cuisine`,
                         `calories`, `carbs`, `protein`, `fat`, `fiber`,
                         `tips_json`, `serve_with_json`, `published_at`
                     ) VALUES (
                         :slug, :title, :description, :category_slug, :subcategory_slug, :diet,
                         :prep_time, :cook_time, :servings, :difficulty, :image,
-                        :published, :featured, :story, :youtube_url,
+                        :published, :featured, :story, :youtube_url, :cuisine,
                         :calories, :carbs, :protein, :fat, :fiber,
                         :tips_json, :serve_with_json, IF(:publish_now = 1, COALESCE(:published_at_in, NOW()), NULL)
                     )
@@ -271,6 +275,7 @@ class RecipeService {
                     ':featured' => $featured,
                     ':story' => $story,
                     ':youtube_url' => $youtubeUrl,
+                    ':cuisine' => $cuisine,
                     ':calories' => $calories,
                     ':carbs' => $carbs,
                     ':protein' => $protein,
@@ -439,6 +444,7 @@ class RecipeService {
             'featured' => (bool)$row['featured'],
             'story' => $row['story'] ?? null,
             'youtubeUrl' => $row['youtube_url'] ?? null,
+            'cuisine' => $row['cuisine'] ?? null,
             'nutrition' => !empty($nutrition) ? $nutrition : null,
             'ingredients' => $ingredients,
             'steps' => $steps,

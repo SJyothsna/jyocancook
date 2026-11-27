@@ -31,7 +31,7 @@ require_once dirname(__DIR__) . '/services/RecipeService.php';
 /** Recipe JSON keys that map to MySQL columns / child tables. Any other key is reported. */
 const IMPORT_KNOWN_RECIPE_KEYS = [
     'slug', 'title', 'description', 'category', 'subcategories', 'subcategory', 'tags', 'diet', 'diets', 'prepTime', 'cookTime', 'servings',
-    'difficulty', 'image', 'published', 'featured', 'publishedAt', 'story', 'youtubeUrl', 'nutrition',
+    'difficulty', 'image', 'published', 'featured', 'publishedAt', 'story', 'youtubeUrl', 'cuisine', 'nutrition',
     'ingredients', 'steps', 'tips', 'serveWith',
 ];
 const IMPORT_KNOWN_INGREDIENT_KEYS = ['name', 'amount', 'unit', 'section'];

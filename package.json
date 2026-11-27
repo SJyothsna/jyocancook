@@ -7,6 +7,7 @@
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
+    "optimise:images": "node bin/optimise-images.mjs",
     "package:staging": "node bin/package-hostinger.mjs --target staging",
     "package:production": "node bin/package-hostinger.mjs --target production",
     "package:production-update": "node bin/package-hostinger.mjs --target production --mode update",
@@ -23,6 +24,7 @@
     "@php-wasm/node": "^3.1.65",
     "@php-wasm/universal": "^3.1.65",
     "pagefind": "^1.3.0",
+    "sharp": "^0.34.5",
     "typescript": "^5.8.0"
   }
 }

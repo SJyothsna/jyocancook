@@ -444,7 +444,7 @@ describe('Static publishing into /public_html/staging (WASM PHP 8.3 + SQLite sta
 
   it('final state: production is still byte-for-byte what it was before any staging operation', () => {
     assert.deepEqual(productionNow(), productionBefore);
-    const withoutUploads = Object.fromEntries(Object.entries(protectedNow()).filter(([rel]) => !/^images\/recipes\/[^/]+\.png$/.test(rel)));
+    const withoutUploads = Object.fromEntries(Object.entries(protectedNow()).filter(([rel]) => !/^images\/recipes\/[^/]+(\.(png|webp)|-(1x1|4x3|16x9)\.jpg)$/.test(rel)));
     assert.deepEqual(withoutUploads, protectedBefore, 'only uploaded photos were added next to the shipped assets');
   });
 });

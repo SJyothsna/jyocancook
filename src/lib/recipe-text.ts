@@ -1,8 +1,8 @@
 // Display helpers for recipe text. The same rules are repeated in backend/generator/TemplateRenderer.php.
 
-const UNIT_LABELS: Record<string, string> = { tsp: 'Tsp', tbsp: 'Tbsp' };
+const UNIT_LABELS: Record<string, string> = { tsp: 'tsp', tbsp: 'Tbsp' };
 
-/** Units are stored as typed ("tbsp") and shown with a capital first letter for tsp and tbsp ("Tbsp"). */
+/** Units are stored as typed and shown as "Tbsp" (capital first letter) and "tsp" (lowercase); others as typed. */
 export function unitLabel(unit: string): string {
   return UNIT_LABELS[unit.trim().toLowerCase()] ?? unit;
 }

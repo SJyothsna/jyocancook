@@ -5,7 +5,7 @@ import menuData from '../../config/menu.json';
 import tagsData from '../../config/tags.json';
 export type Ingredient = {amount:number|null;unit:string;name:string;section?:string};
 export type Nutrition = {calories?:number;carbs?:number;protein?:number;fat?:number;fiber?:number};
-export type Recipe = {slug:string;title:string;description:string;category:string;subcategories?:string[];tags:string[];diets:string[];prepTime:number;cookTime:number;servings:number;difficulty:string;image:string;published:boolean;featured?:boolean;publishedAt?:string;story?:string;ingredients:Ingredient[];steps:{title:string;text:string;image?:string}[];tips?:string[];serveWith?:string[];youtubeUrl?:string;nutrition?:Nutrition};
+export type Recipe = {slug:string;title:string;description:string;category:string;subcategories?:string[];tags:string[];diets:string[];prepTime:number;cookTime:number;servings:number;difficulty:string;image:string;published:boolean;featured?:boolean;publishedAt?:string;story?:string;ingredients:Ingredient[];steps:{title:string;text:string;image?:string}[];tips?:string[];serveWith?:string[];youtubeUrl?:string;cuisine?:string;nutrition?:Nutrition};
 export type Category = {slug:string;name:string;description:string;image?:string;emoji?:string;order:number;subcategories?:string[]};
 export type Subcategory = {slug:string;name:string;order:number};
 export type Diet = {slug:string;name:string;order:number};

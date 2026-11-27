@@ -1,9 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
+import ResponsiveImage from '../../components/ResponsiveImage.astro';
 import { recipes, categoryName, type Recipe } from '../../lib/data';
 import { formatQty } from '../../lib/fractions';
 import { stepBlocks, unitLabel } from '../../lib/recipe-text';
-import { ArrowUpRight, Clock, Flame, Heart, Lightbulb, Printer, Star, Users, Utensils, Zap } from '@lucide/astro';
+import { webpSrcset } from '../../lib/responsive-image';
+import { breadcrumbJsonLd, jsonLdString, recipeDescription, recipeJsonLd } from '../../lib/seo';
+import { ArrowUpRight, Clock, Flame, Heart, Lightbulb, Play, Printer, Star, Users, Utensils, Zap } from '@lucide/astro';
 
 export function getStaticPaths() {
   return recipes.map((recipe) => ({ params: { slug: recipe.slug }, props: { recipe } }));
@@ -63,6 +66,10 @@ function getYouTubeEmbedUrl(url?: string): string | null {
 
 const youtubeEmbedUrl = getYouTubeEmbedUrl(recipe.youtubeUrl);
 
+// The main photo is the first thing seen, so it is fetched early (see the preload link below).
+const HERO_SIZES = '(max-width: 640px) 100vw, (max-width: 1024px) 62vw, 492px';
+const heroSrcset = webpSrcset(recipe.image);
+
 // The category chip is always shown, so a tag that repeats the category is left out.
 const categoryLabel = categoryName(recipe.category).trim().toLowerCase();
 const displayTags = recipe.tags.filter((tag) => {
@@ -92,40 +99,24 @@ recipe.ingredients.forEach((ing) => {
   }
 });
 
-const structured = {
-  '@context': 'https://schema.org',
-  '@type': 'Recipe',
-  name: recipe.title,
-  description: recipe.description,
-  image: [new URL(recipe.image, Astro.site).toString()],
-  recipeYield: String(recipe.servings),
-  prepTime: `PT${recipe.prepTime}M`,
-  cookTime: `PT${recipe.cookTime}M`,
-  recipeCategory: categoryName(recipe.category),
-  keywords: recipe.tags.join(', '),
-  recipeIngredient: recipe.ingredients.map((x) =>
-    [x.amount, x.unit, x.name].filter((v) => v !== null && v !== '').join(' '),
-  ),
-  recipeInstructions: recipe.steps.map((s) => ({
-    '@type': 'HowToStep',
-    name: s.title,
-    text: s.text,
-    ...(s.image ? { image: new URL(s.image, Astro.site).toString() } : {}),
-  })),
-  ...(recipe.nutrition ? {
-    nutrition: {
-      '@type': 'NutritionInformation',
-      ...(recipe.nutrition.calories !== undefined ? { calories: `${recipe.nutrition.calories} calories` } : {}),
-      ...(recipe.nutrition.carbs !== undefined ? { carbohydrateContent: `${recipe.nutrition.carbs} g` } : {}),
-      ...(recipe.nutrition.protein !== undefined ? { proteinContent: `${recipe.nutrition.protein} g` } : {}),
-      ...(recipe.nutrition.fat !== undefined ? { fatContent: `${recipe.nutrition.fat} g` } : {}),
-      ...(recipe.nutrition.fiber !== undefined ? { fiberContent: `${recipe.nutrition.fiber} g` } : {}),
-    },
-  } : {}),
-};
+const siteUrl = String(Astro.site);
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const structured = recipeJsonLd(recipe, {
+  siteUrl,
+  canonicalUrl,
+  categoryName: categoryName(recipe.category),
+  embedUrl: youtubeEmbedUrl,
+});
+const breadcrumbs = breadcrumbJsonLd([
+  { name: 'Home', url: new URL('/', Astro.site).toString() },
+  { name: categoryName(recipe.category), url: new URL(`/category/${recipe.category}/`, Astro.site).toString() },
+  { name: recipe.title, url: canonicalUrl },
+]);
 ---
-<Base title={recipe.title} description={recipe.description} image={recipe.image}>
-  <script type="application/ld+json" slot="head" set:html={JSON.stringify(structured).replace(/</g, '\\u003c')} />
+<Base title={recipe.title} description={recipeDescription(recipe)} image={recipe.image} imageAlt={recipe.title} ogType="article">
+  <script type="application/ld+json" slot="head" set:html={jsonLdString(structured)} />
+  <script type="application/ld+json" slot="head" set:html={jsonLdString(breadcrumbs)} />
+  {heroSrcset && <link slot="head" rel="preload" as="image" type="image/webp" imagesrcset={heroSrcset} imagesizes={HERO_SIZES} fetchpriority="high" />}
   <div class="container recipe-page">
     <div class="breadcrumb">
       <a href="/">Home</a> › <a href={`/category/${recipe.category}/`}>{categoryName(recipe.category)}</a> › {recipe.title}
@@ -133,7 +124,6 @@ const structured = {
     <div class="recipe-title">
       <h1>{recipe.title}</h1>
       <p class="recipe-by">Recipe by <strong>JyoCanCook</strong></p>
-      <p class="intro">{recipe.description}</p>
       <div class="tags">
         <a class="pill" href={`/category/${recipe.category}/`}>{categoryName(recipe.category)}</a>
         {displayTags.map((tag) => (
@@ -151,56 +141,57 @@ const structured = {
 
     <div class="recipe-layout">
       <div>
-        {youtubeEmbedUrl ? (
-          <div class="recipe-main-media video-container">
-            <iframe
-              src={youtubeEmbedUrl}
-              title={`How to make ${recipe.title}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen
-              loading="lazy"
-            ></iframe>
+        <div class="recipe-hero">
+          <div class="recipe-media">
+            <ResponsiveImage class="recipe-main-image" src={recipe.image} alt={recipe.title} sizes={HERO_SIZES} width={800} height={600} loading="eager" fetchpriority="high" />
+            {youtubeEmbedUrl && (
+              <>
+                <button type="button" class="watch-video" data-embed={youtubeEmbedUrl} data-title={`How to make ${recipe.title}`} aria-label={`Play video: how to make ${recipe.title}`}>
+                  <span class="watch-play"><Play aria-hidden="true" /></span>
+                  <span class="watch-label">Watch video</span>
+                </button>
+                <div class="video-container"></div>
+              </>
+            )}
           </div>
-        ) : (
-          <img class="recipe-main-image" src={recipe.image} alt={recipe.title} width="800" height="600" />
-        )}
+          <div class="recipe-about">
+            <div class="recipe-story-badge">About this recipe</div>
+            <p class="intro">{recipe.description}</p>
+            {recipe.story && (
+              <div class="recipe-story-panel">
+                <div class="recipe-story-badge">Story &amp; Background</div>
+                <p class="recipe-story-text">{recipe.story}</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div class="meta-strip">
           <div class="meta-item">
             <Clock class="meta-icon" aria-hidden="true" />
-            <div class="meta-content">
-              <span class="meta-label">Prep Time</span>
-              <strong class="meta-value">{recipe.prepTime} min</strong>
-            </div>
+            <span class="meta-label">Prep time</span>
+            <strong class="meta-value">{recipe.prepTime} min</strong>
           </div>
           <div class="meta-item">
             <Flame class="meta-icon" aria-hidden="true" />
-            <div class="meta-content">
-              <span class="meta-label">Cook Time</span>
-              <strong class="meta-value">{recipe.cookTime} min</strong>
-            </div>
+            <span class="meta-label">Cook time</span>
+            <strong class="meta-value">{recipe.cookTime} min</strong>
           </div>
           <div class="meta-item">
             <Users class="meta-icon" aria-hidden="true" />
-            <div class="meta-content">
-              <span class="meta-label">Servings</span>
-              <strong class="meta-value">{recipe.servings}</strong>
-            </div>
+            <span class="meta-label">Servings</span>
+            <strong class="meta-value">{recipe.servings}</strong>
           </div>
           <div class="meta-item">
             <Star class="meta-icon" aria-hidden="true" />
-            <div class="meta-content">
-              <span class="meta-label">Difficulty</span>
-              <strong class="meta-value">{recipe.difficulty}</strong>
-            </div>
+            <span class="meta-label">Difficulty</span>
+            <strong class="meta-value">{recipe.difficulty}</strong>
           </div>
           {recipe.nutrition?.calories !== undefined && (
             <div class="meta-item">
               <Zap class="meta-icon" aria-hidden="true" />
-              <div class="meta-content">
-                <span class="meta-label">Calories</span>
-                <strong class="meta-value">{recipe.nutrition.calories} kcal</strong>
-              </div>
+              <span class="meta-label">Calories</span>
+              <strong class="meta-value">{recipe.nutrition.calories} kcal</strong>
             </div>
           )}
         </div>
@@ -234,13 +225,6 @@ const structured = {
                 </div>
               )}
             </div>
-          </div>
-        )}
-
-        {recipe.story && (
-          <div class="recipe-story-panel">
-            <div class="recipe-story-badge">Story &amp; Background</div>
-            <p class="recipe-story-text">{recipe.story}</p>
           </div>
         )}
 
@@ -296,7 +280,7 @@ const structured = {
                 </div>
                 {s.image && (
                   <div class="step-image-wrap">
-                    <img class="step-image" src={s.image} alt={s.title} loading="lazy" />
+                    <ResponsiveImage class="step-image" src={s.image} alt={s.title} sizes="220px" />
                   </div>
                 )}
               </div>
@@ -330,7 +314,7 @@ const structured = {
             <div class="sidebar-recipe-list">
               {similarRecipes.map((r) => (
                 <a class="sidebar-recipe-item" href={`/recipes/${r.slug}/`}>
-                  <img class="sidebar-recipe-thumb" src={r.image} alt={r.title} loading="lazy" />
+                  <ResponsiveImage class="sidebar-recipe-thumb" src={r.image} alt={r.title} sizes="64px" />
                   <div class="sidebar-recipe-info">
                     <h3>{r.title}</h3>
                     <div class="sidebar-recipe-meta">
@@ -351,7 +335,7 @@ const structured = {
             <div class="sidebar-recipe-list">
               {latestRecipes.map((r) => (
                 <a class="sidebar-recipe-item" href={`/recipes/${r.slug}/`}>
-                  <img class="sidebar-recipe-thumb" src={r.image} alt={r.title} loading="lazy" />
+                  <ResponsiveImage class="sidebar-recipe-thumb" src={r.image} alt={r.title} sizes="64px" />
                   <div class="sidebar-recipe-info">
                     <h3>{r.title}</h3>
                     <div class="sidebar-recipe-meta">
@@ -413,6 +397,24 @@ const structured = {
       localStorage.setItem('jyo-saved', JSON.stringify(arr));
       showSaved(arr.includes(slug));
     };
+    // The recipe photo is shown with a play button. Clicking it swaps the photo for the YouTube player
+    // in the same space; the player is only loaded at that point.
+    const watch = document.querySelector('.watch-video');
+    const box = document.querySelector('.recipe-media .video-container');
+    if (watch && box) {
+      watch.addEventListener('click', () => {
+        const embed = watch.dataset.embed;
+        const frame = document.createElement('iframe');
+        frame.src = embed + (embed.includes('?') ? '&' : '?') + 'autoplay=1';
+        frame.title = watch.dataset.title;
+        frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        frame.allowFullscreen = true;
+        box.replaceChildren(frame);
+        box.classList.add('playing');
+        watch.hidden = true;
+        frame.focus();
+      });
+    }
     document.querySelector('#share').onclick = async () => {
       if (navigator.share) {
         try {
